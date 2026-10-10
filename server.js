@@ -251,11 +251,12 @@ wss.on('connection', ws => {
         if (!rateAllowed(ws)) { errorTo(ws,'Too many room requests from this connection. Try again in a minute.'); return; }
         const code = cleanCode(msg.code), room = rooms.get(code);
         if (!room) { errorTo(ws,'Room not found. Check the code or ask your friend to create a new room.'); return; }
-        if (room.game.state === 'ended') { errorTo(ws,'That round has ended. Ask the runner to start a new round.'); return; }
+        if (room.game.state === 'ended' && room.members.catcher && isOpen(room.members.catcher)) { errorTo(ws,'That round has ended and the catcher is still connected. Ask the runner to start the next round.'); return; }
         if (room.members.catcher && isOpen(room.members.catcher)) { errorTo(ws,'This room already has two players.'); return; }
+        const wasEnded = room.game.state === 'ended';
         const sessionToken = token(); room.tokens.catcher=sessionToken;
         snapshotTo(ws,room,'catcher',sessionToken);
-        if (room.members.runner && room.members.catcher) beginRound(room,false);
+        if (room.members.runner && room.members.catcher) beginRound(room,wasEnded);
         return;
       }
       if (type === 'reconnect') {

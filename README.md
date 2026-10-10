@@ -44,11 +44,21 @@ Render supports inbound WebSocket connections on web services. Free web services
 
 ## Option C — Keep the game page in ESP32 LittleFS
 
-1. Copy `public/index.html` into your Arduino project's `data/index.html` (or use the filename your ESP32 web server expects).
+1. Copy `public/index.html` into your Arduino project's `data/chase.html` if your existing website already uses `index.html`. If the game should be the homepage, copy it to `data/index.html` instead.
 2. Upload the LittleFS filesystem to the ESP32.
-3. Open the ESP32 page and expand **Connection setup**.
-4. Enter the public backend address, using the WebSocket path, for example `wss://your-service.onrender.com/ws`, then click **SAVE BACKEND ADDRESS**. This address is not a secret; it tells the page where to connect.
-5. Create a room and share the join code or invite link.
+3. The current game HTML is preconfigured to connect to `wss://chasebackend-9loz.onrender.com/ws`. There is no backend settings panel in the player UI.
+4. Open the game from your ESP32 website, create a room, and share the code or invite link.
+
+When the other player is offline, the game stays in a waiting state instead of showing a false round countdown. The runner can use **INVITE PLAYER** to copy the invite. The backend accepts a replacement catcher when the previous catcher disconnected after a finished round.
+
+## Update the existing Render deployment
+
+To apply the waiting-screen fix to the Render backend at `https://chasebackend-9loz.onrender.com/`:
+
+1. Replace the repository's `server.js` with this package's `server.js`.
+2. Replace the repository's `public/index.html` with this package's `public/index.html`.
+3. Commit and push both files to the GitHub repository connected to Render. Wait for Render to finish redeploying.
+4. Separately upload `public/index.html` to the ESP32 LittleFS `data` folder as described above. Re-deploying Render does not update the copy saved in ESP32 flash.
 
 **Important remote-access distinction:** if your ESP32 website is only available at a private URL such as `http://192.168.1.20`, a friend on another network cannot open that page. The backend makes the *game session* reachable, but it does not automatically publish the ESP32 web server. For remote play, either both players open the public Render URL (the easiest option; Render serves the same game page), or make your ESP32 website publicly reachable through a secure remote-access setup you already control.
 
