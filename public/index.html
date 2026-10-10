@@ -173,6 +173,59 @@ body.in-game .page{height:100dvh;max-height:100dvh;padding:max(5px,env(safe-area
   .mobileNote{display:none!important}
 }
 @media(hover:hover) and (pointer:fine){.touchControls,.mobileNote{display:none!important}}
+
+/* Explicitly visible consent control: custom checkmark works on mobile dark themes. */
+.profileModalBody .consentLine{display:flex!important;align-items:flex-start;gap:10px;width:100%;min-width:0}
+.profileModalBody .consentCheckbox{appearance:none!important;-webkit-appearance:none!important;display:block!important;visibility:visible!important;opacity:1!important;position:relative;flex:0 0 20px;width:20px!important;min-width:20px;height:20px!important;min-height:20px;margin:1px 0 0;padding:0;border:2px solid #bfd7a9;border-radius:5px;background:#0b140c!important;box-shadow:0 0 0 2px #bfd7a91c;cursor:pointer;outline-offset:3px}
+.profileModalBody .consentCheckbox:checked{background:#bfd7a9!important;border-color:#d8ebca}
+.profileModalBody .consentCheckbox:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #152014;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.profileModalBody .consentLine>label{display:block;flex:1 1 auto;min-width:0;margin:0;color:#c2cbb9;font-size:inherit;line-height:1.45;font-weight:450;cursor:pointer}
+.profileModalBody .consentCheckbox:focus-visible{outline:2px solid #d8ebca;outline-offset:3px}
+/* Phone rotation helper. The game only switches to this screen while a touch device is portrait. */
+.rotateOverlay{display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;padding:22px;background:#0b120df5;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-align:center}
+.rotateCard{width:min(390px,100%);padding:24px;border:1px solid #526647;border-radius:20px;background:linear-gradient(145deg,#202c20,#121a12);box-shadow:0 24px 80px #0008}
+.rotateGlyph{width:62px;height:62px;margin:0 auto 14px;display:grid;place-items:center;border:1px solid #536848;border-radius:18px;background:#2a3926;color:#c7ddb2;font-size:2.5rem;line-height:1}
+.rotateCard h2{font-size:1.45rem;line-height:1.1;margin:8px 0}.rotateCard p{font-size:.87rem;line-height:1.5;color:#afbaa6;margin:10px 0 18px}.rotateCard button{width:100%;min-height:46px}.rotateCard small{display:block;margin-top:12px;color:#889780;font-size:.7rem;line-height:1.4}
+@media (max-width:900px) and (orientation:portrait) and (pointer:coarse){body.in-game #rotateOverlay{display:flex}body.in-game #gameView{visibility:hidden!important}}
+/* True wide-screen mobile layout: full-width game field, landscape HUD, floating joystick/sprint. */
+@media (max-width:900px) and (orientation:landscape) and (pointer:coarse){
+ body.in-game .page{padding:3px max(5px,env(safe-area-inset-left)) 3px max(5px,env(safe-area-inset-right));}
+ #gameView:not(.hidden){width:100%;height:100dvh;max-height:100dvh;gap:3px;justify-content:stretch}
+ #gameView>.hero{min-height:30px;flex:0 0 30px;gap:4px}
+ #gameView .gameActions{width:auto;max-width:none!important;flex:0 0 auto;justify-content:flex-end;gap:4px}
+ #gameView .gameActions button{min-height:28px;padding:3px 7px!important;font-size:.58rem!important;border-radius:8px}
+ #gameView .gameShell{width:100%;max-width:none;min-height:0;max-height:none;flex:1 1 auto;display:flex;flex-direction:column;border-radius:10px}
+ #gameView .gameHead{flex:0 0 auto;min-height:30px;padding:3px 6px;gap:5px}
+ #gameView .metrics{display:flex;width:auto;flex:0 0 auto;gap:4px}
+ #gameView .metric{min-width:57px;padding:2px 5px}
+ #gameView .metric small{font-size:.43rem}
+ #gameView .metric strong{font-size:.74rem}
+ #gameView .canvasWrap{height:auto;min-height:0;max-height:none;flex:1 1 auto;aspect-ratio:auto;width:100%;overflow:hidden}
+ #gameView .canvasWrap canvas{width:100%;height:100%;max-height:none;aspect-ratio:auto;object-fit:fill}
+ #gameView .gameFoot{flex:0 0 auto;min-height:25px;padding:2px 6px;gap:4px}
+ #gameView .gameFoot .hint{font-size:.54rem;line-height:1.1}
+ #gameView .gameFoot .actionrow button{min-height:23px;padding:3px 6px;font-size:.53rem}
+ #gameView .touchControls{position:fixed;z-index:55;left:max(5px,env(safe-area-inset-left));right:max(5px,env(safe-area-inset-right));bottom:max(2px,env(safe-area-inset-bottom));width:auto;max-width:none;height:70px;margin:0;padding:0 10px;pointer-events:none;gap:12px}
+ #gameView .joystickArea{width:70px;height:70px;pointer-events:auto}
+ #gameView .joystickBase{width:64px;height:64px}
+ #gameView .joystickKnob{width:28px;height:28px}
+ #gameView .sprintBtn{width:61px;min-width:61px;height:54px;min-height:54px;padding:4px;border-radius:15px;pointer-events:auto}
+ #gameView .sprintGlyph{font-size:1.15rem}.sprintLabel{font-size:.55rem}.sprintBtn small{display:none}
+ #gameView .controlCaption,#gameView .mobileNote{display:none!important}
+ .profileDialog{width:min(680px,calc(100vw - 20px));max-height:calc(100dvh - 12px);padding:12px 16px;border-radius:15px}
+ .profileModalHeader{margin-bottom:6px;align-items:center}
+ .profileModalHeader h2{font-size:1.2rem;margin:3px 0}
+ .profileModalIntro{font-size:.68rem;line-height:1.3}
+ .profileModalBody{gap:5px}
+ .profileModalBody .memoryBadge{margin-bottom:0}
+ .profileModalBody .profileLabel{margin:1px 0 0}
+ .profileModalBody .profileInput{min-height:36px;padding:6px 10px}
+ .profileModalBody .consentLine{font-size:.66rem;line-height:1.28;margin-top:3px}
+ .profileModalActions{margin-top:4px;gap:7px}
+ .profileModalActions button{min-height:32px;font-size:.58rem;padding:5px 8px}
+ .profileFooterNote{margin:4px 0 0;font-size:.58rem}
+}
+
 </style>
 
 </head>
@@ -246,7 +299,7 @@ body.in-game .page{height:100dvh;max-height:100dvh;padding:max(5px,env(safe-area
       <span class="memoryBadge">SAVED ON THIS DEVICE</span>
       <label class="profileLabel" for="playerName">CALLSIGN</label>
       <input id="playerName" class="profileInput" maxlength="24" autocomplete="nickname" placeholder="Forest Scout" aria-label="Player callsign">
-      <label class="consentLine" for="privacyConsent"><input id="privacyConsent" type="checkbox"><span>I agree that CHASE.EXE stores a random player ID, callsign, IP address and match results to remember my profile and prevent abuse. My IP is cleared after 30 days without a visit. My profile and match records remain until I use FORGET SAVED PROFILE. My IP is never shown to other players.</span></label>
+      <div class="consentLine"><input id="privacyConsent" class="consentCheckbox" type="checkbox" aria-label="I agree to the CHASE.EXE player data notice"><label for="privacyConsent">I agree that CHASE.EXE stores a random player ID, callsign, IP address and match results to remember my profile and prevent abuse. My IP is cleared after 30 days without a visit. My profile and match records remain until I use FORGET SAVED PROFILE. My IP is never shown to other players.</label></div>
       <div id="profileStatus" class="profileStatus" role="status" aria-live="polite"></div>
     </div>
     <div class="profileModalActions"><button id="forgetProfileBtn" class="quiet tiny" type="button">FORGET SAVED PROFILE</button><button id="saveProfileBtn" class="primary" type="button">SAVE &amp; CONTINUE</button></div>
@@ -254,13 +307,32 @@ body.in-game .page{height:100dvh;max-height:100dvh;padding:max(5px,env(safe-area
   </section>
 </div>
 
+<div id="rotateOverlay" class="rotateOverlay" role="dialog" aria-modal="true" aria-labelledby="rotateTitle">
+  <div class="rotateCard">
+    <div class="rotateGlyph" aria-hidden="true">↻</div>
+    <div class="eyebrow">LANDSCAPE REQUIRED</div>
+    <h2 id="rotateTitle">Turn your phone sideways</h2>
+    <p>CHASE.EXE is tuned for horizontal play. Rotate your phone to landscape for the full woodland view and touch controls.</p>
+    <button id="landscapeBtn" class="primary" type="button">TRY LANDSCAPE MODE</button>
+    <small>Auto-rotate may need to be enabled in your phone settings.</small>
+  </div>
+</div>
 <div id="toast" class="toast hidden" role="status"></div>
 <script>
 (function(){'use strict';
 const $=id=>document.getElementById(id);
 const lobbyView=$('lobbyView'),gameView=$('gameView'),canvas=$('gameCanvas'),ctx=canvas.getContext('2d');
-const W=960,H=600,WORLD_W=2200,WORLD_H=1600;
+let W=960,H=600;const WORLD_W=2200,WORLD_H=1600;
 const PROFILE_CONSENT_VERSION='2026-10-v1';
+function resizeGameCanvas(){
+  const wrap=canvas.parentElement;if(!wrap)return;const rect=wrap.getBoundingClientRect();
+  if(rect.width<80||rect.height<60)return;
+  const dpr=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+  const nextW=Math.max(1,Math.round(rect.width)),nextH=Math.max(1,Math.round(rect.height));
+  const pixelW=Math.round(nextW*dpr),pixelH=Math.round(nextH*dpr);
+  if(W!==nextW||H!==nextH||canvas.width!==pixelW||canvas.height!==pixelH){W=nextW;H=nextH;canvas.width=pixelW;canvas.height=pixelH;ctx.setTransform(dpr,0,0,dpr,0,0);}
+} 
+
 const PROFILE_ID_KEY='chasePlayerId_v1',PROFILE_TOKEN_KEY='chaseProfileToken_v1',PROFILE_NAME_KEY='chasePlayerName_v1',PROFILE_CONSENT_KEY='chasePrivacyConsent_v1';
 const BACKEND_WS_URL='wss://chasebackend-9loz.onrender.com/ws';
 let backendUrl=BACKEND_WS_URL,socket=null,heartbeatTimer=0,reconnectTimer=0,inputTimer=0,room=null,code='',role='',sessionToken='',connected=false,leaving=false,starting=false,roundEnding=false,lastFrame=0,lastStatePhase='',lastSend=0,serverOffset=0,quickMatchMode=false;
@@ -353,7 +425,7 @@ function handleMessage(data,isReconnect){
 function createRoom(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=false;const b=$('createBtn');b.disabled=true;setMsg('lobbyStatus','Connecting and creating a private room…');connect({type:'create'});setTimeout(()=>{b.disabled=false},1800)}
 function quickMatch(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=true;const b=$('quickMatchBtn');b.disabled=true;setMsg('lobbyStatus','Finding a random player… keep this page open.');netStatus(false,'SEARCHING');connect({type:'matchmake'});setTimeout(()=>{if(!code){b.disabled=false;if(!socket||socket.readyState!==WebSocket.OPEN)quickMatchMode=false}},9000)}
 function joinRoom(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=false;const c=$('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);$('joinCode').value=c;if(c.length!==8){setMsg('lobbyStatus','Enter the full 8-character join code.','error');return}const b=$('joinBtn');b.disabled=true;setMsg('lobbyStatus','Connecting to room '+c+'…');connect({type:'join',code:c});setTimeout(()=>{b.disabled=false},1200)}
-function enterRoom(){starting=false;leaving=false;roundEnding=false;stamina=100;inputs.clear();player=Object.assign({},(room&&room.players&&room.players[role])||spawn[role]||spawn.runner);best=Number(localStorage.getItem('chaseBest_'+role)||0);score=0;camera.x=clamp(player.x-W/2,0,WORLD_W-W);camera.y=clamp(player.y-H/2,0,WORLD_H-H);gameView.classList.remove('hidden');lobbyView.classList.add('hidden');document.body.classList.add('in-game');$('roomLabel').textContent=code;$('bigCode').textContent=code;$('roleTitle').textContent=role==='runner'?'RUNNER':'HUNTER';$('runnerBadge').textContent=role==='runner'?'● RUNNER — YOU / MOSS':'● RUNNER — RIVAL / MOSS';$('catcherBadge').textContent=role==='catcher'?'● HUNTER — YOU / RUST':'● HUNTER — RIVAL / RUST';$('gameSubtitle').textContent=role==='runner'?'You are the runner. Stay hidden in the woodland until extraction.':'You are the hunter. Track down the runner before extraction.';$('bestText').textContent=best;$('restartBtn').classList.toggle('hidden',role!=='runner');$('connectionHint').textContent='Connecting to rival…';render();lastStatePhase='';finishKey='';updateFromRoom(room);}
+function enterRoom(){starting=false;leaving=false;roundEnding=false;stamina=100;inputs.clear();player=Object.assign({},(room&&room.players&&room.players[role])||spawn[role]||spawn.runner);best=Number(localStorage.getItem('chaseBest_'+role)||0);score=0;camera.x=clamp(player.x-W/2,0,WORLD_W-W);camera.y=clamp(player.y-H/2,0,WORLD_H-H);gameView.classList.remove('hidden');lobbyView.classList.add('hidden');document.body.classList.add('in-game');resizeGameCanvas();window.requestAnimationFrame(resizeGameCanvas);$('roomLabel').textContent=code;$('bigCode').textContent=code;$('roleTitle').textContent=role==='runner'?'RUNNER':'HUNTER';$('runnerBadge').textContent=role==='runner'?'● RUNNER — YOU / MOSS':'● RUNNER — RIVAL / MOSS';$('catcherBadge').textContent=role==='catcher'?'● HUNTER — YOU / RUST':'● HUNTER — RIVAL / RUST';$('gameSubtitle').textContent=role==='runner'?'You are the runner. Stay hidden in the woodland until extraction.':'You are the hunter. Track down the runner before extraction.';$('bestText').textContent=best;$('restartBtn').classList.toggle('hidden',role!=='runner');$('connectionHint').textContent='Connecting to rival…';render();lastStatePhase='';finishKey='';updateFromRoom(room);}
 function updateRoundButton(g,online){const b=$('restartBtn');if(role!=='runner'){b.classList.add('hidden');return;}b.classList.remove('hidden');if(g.state==='countdown'||g.state==='playing'){b.disabled=true;b.textContent='ROUND IN PROGRESS';}else if(!online.runner||!online.catcher){b.disabled=false;b.textContent=quickMatchMode?'CANCEL SEARCH':'INVITE PLAYER';}else if(g.state==='ended'){b.disabled=false;b.textContent='NEW ROUND';}else{b.disabled=true;b.textContent='WAITING…';}}
 function updateFromRoom(r){if(!r||!r.game)return;const g=r.game;const online=r.online||{};$('connectionHint').textContent=connected?(quickMatchMode?'Random matchmaking • '+(online.runner&&online.catcher?'RIVAL FOUND':'SEARCHING FOR A PLAYER'):'Live connection • code '+code+' • '+(online.runner&&online.catcher?'2 PLAYERS ONLINE':'WAITING FOR BOTH PLAYERS')):'Reconnecting to game server…';const me=r.players&&r.players[role];if(me){player=Object.assign({},me);stamina=Number(me.stamina??100);score=Number(me.score||0);$('scoreText').textContent=score;}$('timerText').textContent=g.state==='ended'?'0':g.state==='waiting'?'90':String(Math.max(0,Math.ceil((Number(g.finishAt||0)-serverNow())/1000)));
   const phase=g.state+':'+String(g.round||1)+':'+String(g.winner||'')+':'+(online.runner?'R1':'R0')+':'+(online.catcher?'C1':'C0');
@@ -441,8 +513,20 @@ function render(){if(!ctx)return;ctx.clearRect(0,0,W,H);ctx.fillStyle='#273a29';
   // Screen-space field kit HUD remains pinned while the camera moves.
   ctx.save();ctx.fillStyle='#111b13dd';roundedRect(ctx,18,H-34,164,17,6);ctx.fill();ctx.fillStyle='#9eae8a';ctx.font='10px system-ui';ctx.textAlign='left';ctx.fillText('ADRENALINE',25,H-41);ctx.fillStyle=stamina>28?'#a8c895':'#c9795e';roundedRect(ctx,23,H-29,154*(clamp(stamina,0,100)/100),7,3);ctx.fill();if(room){drawMiniMap(currentPlayer('runner'),currentPlayer('catcher'))}ctx.restore();
   if(room&&room.game&&room.game.state==='waiting'){ctx.save();ctx.fillStyle='#e7e6ce';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(quickMatchMode?'SEARCHING FOR A RIVAL':'WAITING FOR BOTH PLAYERS',W/2,34);ctx.restore()}}
-function tick(t){requestAnimationFrame(tick);if(!lastFrame)lastFrame=t;lastFrame=t;if(gameView.classList.contains('hidden'))return;if(!room){render();return}const g=room.game;if(g&&g.state==='countdown'){const n=Math.max(0,Math.ceil((Number(g.startAt)-serverNow())/1000));if($('overlayText'))$('overlayText').textContent=n>0?'Round starts in '+n+'…':'GO!'}if(g&&g.state==='playing'){$('timerText').textContent=String(Math.max(0,Math.ceil((Number(g.finishAt)-serverNow())/1000)));}if(g&&g.state==='waiting'&&room.waitTimeoutAt&&!(room.online&&room.online.runner&&room.online.catcher)&&!$('gameOverlay').classList.contains('hidden')){const secs=Math.max(0,Math.ceil((Number(room.waitTimeoutAt)-serverNow())/1000));const mm=String(Math.floor(secs/60)).padStart(2,'0'),ss=String(secs%60).padStart(2,'0');$('overlayText').textContent=(quickMatchMode?'Searching for a random rival.':'Your invite is open for a limited time.')+' Time remaining: '+mm+':'+ss+'.';}render()}
-$('createBtn').addEventListener('click',createRoom);$('quickMatchBtn').addEventListener('click',quickMatch);$('joinBtn').addEventListener('click',joinRoom);$('joinCode').addEventListener('input',e=>{const p=e.target.selectionStart;e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);try{e.target.setSelectionRange(p,p)}catch(err){}});$('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom()});$('shareBtn').addEventListener('click',()=>copyText(roomLink()));$('fullscreenBtn').addEventListener('click',async()=>{const target=$('gameView');try{if(!document.fullscreenElement){if(target.requestFullscreen)await target.requestFullscreen({navigationUI:'hide'});else showToast('Fullscreen is not supported in this browser.')}else await document.exitFullscreen()}catch(e){showToast('Fullscreen could not be opened.')}});document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'⤢ EXIT FULLSCREEN':'⛶ FULLSCREEN'});$('overlayCopy').addEventListener('click',()=>{const online=room&&room.online||{};if(quickMatchMode&&room&&room.game&&room.game.state==='waiting'&&(!online.runner||!online.catcher)){leaveRoom(false);return}if(room&&room.game&&room.game.state==='ended'&&role==='runner'&&online.runner&&online.catcher){restartRound();return}copyText(roomLink())});$('leaveBtn').addEventListener('click',()=>leaveRoom(false));$('restartBtn').addEventListener('click',restartRound);$('soundBtn').addEventListener('click',()=>{soundOn=!soundOn;$('soundBtn').textContent='SOUND: '+(soundOn?'ON':'OFF');if(soundOn){startAudio();beep(550,.1,'sine',.03)}});
+function tick(t){window.addEventListener('resize',resizeGameCanvas,{passive:true});window.addEventListener('orientationchange',()=>setTimeout(resizeGameCanvas,180),{passive:true});
+requestAnimationFrame(()=>{resizeGameCanvas();tick(performance.now())});if(!lastFrame)lastFrame=t;lastFrame=t;if(gameView.classList.contains('hidden'))return;if(!room){render();return}const g=room.game;if(g&&g.state==='countdown'){const n=Math.max(0,Math.ceil((Number(g.startAt)-serverNow())/1000));if($('overlayText'))$('overlayText').textContent=n>0?'Round starts in '+n+'…':'GO!'}if(g&&g.state==='playing'){$('timerText').textContent=String(Math.max(0,Math.ceil((Number(g.finishAt)-serverNow())/1000)));}if(g&&g.state==='waiting'&&room.waitTimeoutAt&&!(room.online&&room.online.runner&&room.online.catcher)&&!$('gameOverlay').classList.contains('hidden')){const secs=Math.max(0,Math.ceil((Number(room.waitTimeoutAt)-serverNow())/1000));const mm=String(Math.floor(secs/60)).padStart(2,'0'),ss=String(secs%60).padStart(2,'0');$('overlayText').textContent=(quickMatchMode?'Searching for a random rival.':'Your invite is open for a limited time.')+' Time remaining: '+mm+':'+ss+'.';}render()}
+$('createBtn').addEventListener('click',createRoom);$('quickMatchBtn').addEventListener('click',quickMatch);$('joinBtn').addEventListener('click',joinRoom);$('joinCode').addEventListener('input',e=>{const p=e.target.selectionStart;e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);try{e.target.setSelectionRange(p,p)}catch(err){}});$('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom()});$('shareBtn').addEventListener('click',()=>copyText(roomLink()));async function requestLandscapeMode(){
+  try{if(!document.fullscreenElement){if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});}
+    if(screen.orientation&&typeof screen.orientation.lock==='function'){await screen.orientation.lock('landscape');showToast('Landscape mode enabled.');}
+    else if(matchMedia('(orientation:portrait)').matches){showToast('Please rotate your phone to landscape.');}
+  }catch(e){showToast('Rotate your phone to landscape. If it stays portrait, enable Auto-rotate in quick settings.');}
+  setTimeout(resizeGameCanvas,100);
+}
+$('landscapeBtn').addEventListener('click',requestLandscapeMode);
+$('fullscreenBtn').addEventListener('click',async()=>{try{if(document.fullscreenElement){await document.exitFullscreen();try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock()}catch(e){}}else{await requestLandscapeMode()}}catch(e){showToast('Fullscreen is not available here. Rotate your phone manually.')}});
+document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'⤢ EXIT FULLSCREEN':'⛶ FULLSCREEN';setTimeout(resizeGameCanvas,100)});
+window.addEventListener('resize',()=>{resizeGameCanvas()});window.addEventListener('orientationchange',()=>setTimeout(resizeGameCanvas,180));
+$('overlayCopy').addEventListener('click',()=>{const online=room&&room.online||{};if(quickMatchMode&&room&&room.game&&room.game.state==='waiting'&&(!online.runner||!online.catcher)){leaveRoom(false);return}if(room&&room.game&&room.game.state==='ended'&&role==='runner'&&online.runner&&online.catcher){restartRound();return}copyText(roomLink())});$('leaveBtn').addEventListener('click',()=>leaveRoom(false));$('restartBtn').addEventListener('click',restartRound);$('soundBtn').addEventListener('click',()=>{soundOn=!soundOn;$('soundBtn').textContent='SOUND: '+(soundOn?'ON':'OFF');if(soundOn){startAudio();beep(550,.1,'sine',.03)}});
 window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea')return;const k=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Shift'].includes(e.code)?e.code:null;if(k){inputs.add(k);if(k.startsWith('Arrow'))e.preventDefault();startAudio()}});window.addEventListener('keyup',e=>inputs.delete(e.code));window.addEventListener('blur',()=>{inputs.clear();resetJoystick()});document.querySelectorAll('[data-key]').forEach(btn=>{const k=btn.getAttribute('data-key');const down=e=>{e.preventDefault();inputs.add(k);startAudio();try{btn.setPointerCapture(e.pointerId)}catch(err){}};const up=e=>{if(e) e.preventDefault();inputs.delete(k)};btn.addEventListener('pointerdown',down);['pointerup','pointercancel','lostpointercapture','pointerleave'].forEach(ev=>btn.addEventListener(ev,up))});setupJoystick();
 const params=new URLSearchParams(location.search);const invited=(params.get('join')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);if(invited.length===8){$('joinCode').value=invited;setMsg('lobbyStatus','Invite code found. Join the room to enter the chase.');}
 try{const saved=JSON.parse(sessionStorage.getItem('chaseSession')||'null');if(localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION&&saved&&saved.code&&saved.sessionToken){code=saved.code;role=saved.role;sessionToken=saved.sessionToken;quickMatchMode=Boolean(saved.quickMatchMode);setMsg('lobbyStatus','Restoring your previous multiplayer session…');connect({type:'reconnect',code,sessionToken},true)}}catch(e){}
