@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: chase-exe-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production

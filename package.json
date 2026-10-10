@@ -1,0 +1,18 @@
+{
+  "name": "chase-exe-multiplayer-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-authoritative WebSocket relay for CHASE.EXE two-player tag game",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.22.0"
+  }
+}
