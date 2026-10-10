@@ -1,6 +1,6 @@
 # CHASE.EXE — Backend + ESP32 setup
 
-This package contains the single-file HTML game frontend and a small Node.js WebSocket backend. The backend assigns random 8-character room codes and per-player session tokens, validates inputs, simulates movement on the server, and decides whether the runner escaped or was tagged.
+This package contains the single-file HTML game frontend and a small Node.js WebSocket backend. The backend supports random-player matchmaking plus private 8-character invite rooms. It assigns per-player session tokens, validates inputs, simulates movement on the server, and decides whether the runner escaped or was tagged. The visual map is a camera-follow woodland research site.
 
 ## Credentials and authentication
 
@@ -20,7 +20,7 @@ This package contains the single-file HTML game frontend and a small Node.js Web
    npm start
    ```
 
-4. Open `http://localhost:3000`. Create a room, then open the same address in another browser window and join using the displayed code.
+4. Open `http://localhost:3000`. Choose Find Match in one browser, then Find Match in a second browser to pair automatically. You can also create a private room and join it with a code.
 5. The health endpoint is `http://localhost:3000/health`.
 
 For local multiplayer from a second device on the **same Wi-Fi**, use the computer's LAN IP, for example `ws://192.168.1.20:3000/ws`, in the game's **Connection setup**. Allow Node.js through the computer's firewall for private networks. Do not expose this unencrypted `ws://` local test server to the public internet.
@@ -40,13 +40,13 @@ Render supports inbound WebSocket connections on web services. Free web services
    - **Root directory:** leave blank if the files are in the repository root
 5. Leave `ALLOWED_ORIGINS` unset/blank for your first test. If you later set it, enter a comma-separated list of exact page origins (for example, `https://your-service.onrender.com`). Origins are not URLs with `/ws` paths.
 6. Wait for the deployment to finish. Render gives you a URL like `https://your-service.onrender.com`.
-7. Open that URL. The page detects the matching secure WebSocket URL automatically. Create a room; on a second device open the **same public URL**, type the room code, and join.
+7. Open that URL. The page detects the matching secure WebSocket URL automatically. Choose **Find Match** on both devices to pair automatically, or create a private room and share the code.
 
 ## Option C — Keep the game page in ESP32 LittleFS
 
 1. Copy `public/index.html` into your Arduino project's `data/chase.html` if your existing website already uses `index.html`. If the game should be the homepage, copy it to `data/index.html` instead.
 2. Upload the LittleFS filesystem to the ESP32.
-3. The current game HTML is preconfigured to connect to `wss://chasebackend-9loz.onrender.com/ws`. There is no backend settings panel in the player UI.
+3. The current game HTML is preconfigured to connect to `wss://chasebackend-9loz.onrender.com/ws`. There is no backend settings panel in the player UI. The game view is centered with document scrolling disabled, the camera follows the local player through the larger woodland map, and Find Match places players into random open waiting rooms.
 4. Open the game from your ESP32 website, create a room, and share the code or invite link.
 
 When the other player is offline, the game stays in a waiting state instead of showing a false round countdown. The runner can use **INVITE PLAYER** to copy the invite. The backend accepts a replacement catcher when the previous catcher disconnected after a finished round.

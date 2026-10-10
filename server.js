@@ -24,18 +24,25 @@ const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
 
-const W = 960, H = 600, RADIUS = 13;
+const W = 2200, H = 1600, RADIUS = 13;
+const pond = {x:1170,y:790,rx:152,ry:96};
 const walls = [
-  {x:145,y:104,w:175,h:35},{x:390,y:70,w:36,h:155},{x:525,y:116,w:180,h:34},
-  {x:786,y:95,w:38,h:137},{x:98,y:235,w:38,h:154},{x:222,y:284,w:167,h:34},
-  {x:475,y:250,w:165,h:34},{x:695,y:285,w:165,h:34},{x:144,y:435,w:190,h:34},
-  {x:395,y:390,w:36,h:143},{x:515,y:445,w:170,h:34},{x:778,y:412,w:40,h:105},
-  {x:330,y:178,w:35,h:65},{x:604,y:176,w:34,h:58}
+  {x:370,y:145,w:165,h:112,type:'cabin'},{x:720,y:270,w:178,h:32,type:'stone'},
+  {x:1032,y:138,w:42,h:206,type:'ruinwall'},{x:1480,y:250,w:196,h:126,type:'shed'},
+  {x:1815,y:330,w:152,h:34,type:'stone'},{x:270,y:500,w:210,h:40,type:'log'},
+  {x:625,y:650,w:250,h:42,type:'stone'},{x:990,y:535,w:172,h:118,type:'ruin'},
+  {x:1450,y:668,w:248,h:42,type:'stone'},{x:1800,y:865,w:42,h:202,type:'ruinwall'},
+  {x:340,y:1030,w:172,h:114,type:'ruin'},{x:700,y:1240,w:240,h:40,type:'log'},
+  {x:1110,y:1050,w:42,h:230,type:'ruinwall'},{x:1430,y:1260,w:210,h:86,type:'shelter'},
+  {x:1800,y:1190,w:160,h:36,type:'stone'},{x:845,y:1010,w:176,h:32,type:'stone'},
+  {x:1280,y:490,w:162,h:34,type:'stone'},{x:530,y:370,w:38,h:150,type:'ruinwall'}
 ];
 const spawn = {
-  runner: {x:64,y:70,dx:1,dy:0,stamina:100,score:0,active:true},
-  catcher:{x:896,y:530,dx:-1,dy:0,stamina:100,score:0,active:true}
+  runner: {x:150,y:170,dx:1,dy:0,stamina:100,score:0,active:true},
+  catcher:{x:2040,y:1430,dx:-1,dy:0,stamina:100,score:0,active:true}
 };
+function makeTrees(){let seed=731991;const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};const out=[];let attempts=0;while(out.length<142&&attempts<2200){attempts++;const x=38+rnd()*(W-76),y=38+rnd()*(H-76),r=13+rnd()*8;if(Math.hypot(x-spawn.runner.x,y-spawn.runner.y)<155||Math.hypot(x-spawn.catcher.x,y-spawn.catcher.y)<155)continue;if(walls.some(w=>x>w.x-35&&x<w.x+w.w+35&&y>w.y-35&&y<w.y+w.h+35))continue;const ex=(x-pond.x)/(pond.rx+30),ey=(y-pond.y)/(pond.ry+30);if(ex*ex+ey*ey<1.22)continue;if(out.some(t=>Math.hypot(x-t.x,y-t.y)<44))continue;out.push({x,y,r,variant:Math.floor(rnd()*4),shade:rnd()});}return out}
+const trees=makeTrees();
 
 const app = express();
 app.disable('x-powered-by');
@@ -87,10 +94,11 @@ function publishNotice(room, message) {
 }
 function isOpen(ws) { return ws && ws.readyState === WebSocket.OPEN; }
 function touch(room) { room.lastSeen = Date.now(); }
-function newRoom() {
+function newRoom(quickMatch = false) {
   const code = makeCode();
   return {
     code,
+    quickMatch:Boolean(quickMatch),
     createdAt:Date.now(),
     lastSeen:Date.now(),
     members:{runner:null,catcher:null},
@@ -152,6 +160,9 @@ function collides(x,y) {
     const dx=x-closestX, dy=y-closestY;
     if (dx*dx+dy*dy < RADIUS*RADIUS) return true;
   }
+  for (const t of trees) { const rr=RADIUS+8, dx=x-t.x, dy=y-t.y; if (dx*dx+dy*dy<rr*rr) return true; }
+  const px=(x-pond.x)/(pond.rx+RADIUS), py=(y-pond.y)/(pond.ry+RADIUS);
+  if (px*px+py*py < 1) return true;
   return false;
 }
 function movePlayer(room, role, dt, now) {
@@ -198,6 +209,10 @@ function handleDetach(ws, intentional=false) {
       room.game.winner = ''; room.game.endedAt = 0; room.game.result = 'Catcher left. Waiting for a new catcher.';
     }
   }
+  if (!intentional && role === 'catcher' && room.quickMatch && room.game.state === 'ended') {
+    room.tokens.catcher = null; room.game.state='waiting'; room.game.startAt=0; room.game.finishAt=0;
+    room.game.winner=''; room.game.endedAt=0; room.game.result='Rival disconnected. Searching for another player.';
+  }
   if (room.game.state === 'playing' || room.game.state === 'countdown') {
     room.game.state = 'waiting'; room.game.startAt=0; room.game.finishAt=0;
     room.game.winner=''; room.game.result='A player disconnected. Waiting for both players.';
@@ -239,6 +254,24 @@ wss.on('connection', ws => {
     const type = String(msg.type || '');
     if (type === 'heartbeat') { send(ws,{type:'heartbeat',serverTime:Date.now()}); return; }
     if (!ws.roomCode) {
+      if (type === 'matchmake') {
+        if (!rateAllowed(ws)) { errorTo(ws,'Too many matchmaking requests. Wait a minute and try again.'); return; }
+        if (rooms.size >= 1000) { errorTo(ws,'The server is currently full. Try again later.'); return; }
+        const waiting = Array.from(rooms.values()).filter(r => r.quickMatch && r.game.state === 'waiting' && isOpen(r.members.runner) && !isOpen(r.members.catcher) && Date.now()-r.lastSeen < ROOM_TTL_MS);
+        if (waiting.length) {
+          const room = waiting[crypto.randomInt(waiting.length)];
+          const sessionToken = token(); room.tokens.catcher = sessionToken;
+          snapshotTo(ws,room,'catcher',sessionToken);
+          if (room.members.runner && room.members.catcher) beginRound(room,false);
+          publishNotice(room,'Random rival found. The chase is starting.');
+        } else {
+          const room = newRoom(true); rooms.set(room.code,room);
+          const sessionToken = token(); room.tokens.runner = sessionToken;
+          snapshotTo(ws,room,'runner',sessionToken);
+          send(ws,{type:'matchmaking',status:'queued',message:'Searching for another player…'});
+        }
+        return;
+      }
       if (type === 'create') {
         if (!rateAllowed(ws)) { errorTo(ws,'Too many room requests from this connection. Try again in a minute.'); return; }
         if (rooms.size >= 1000) { errorTo(ws,'The server is currently full. Try again later.'); return; }
