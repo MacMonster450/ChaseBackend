@@ -52,6 +52,19 @@ ORDER BY completed_at DESC
 LIMIT 50;
 ```
 
+## Private administrator dashboard
+
+Open `https://chasebackend-9loz.onrender.com/admin` after deployment. The dashboard itself shows no player records until an administrator signs in. The player, IP, match-summary, and match-list APIs require a valid server-side admin session; admin credentials are never embedded in either HTML file.
+
+In Render → the `chasebackend-9loz` Web Service → **Environment**, set these two secret environment variables:
+
+- `ADMIN_USERNAME` — defaults to `MacMonster` in the backend; set this variable only if you want to override it.
+- `ADMIN_PASSWORD` — set this to your private administrator password.
+
+Enter the password directly in the Render dashboard; do not paste it into `server.js`, the HTML, `.env.example`, or GitHub. The username is not a password and may be stored as configuration, but the password must remain private. Saving environment changes triggers a restart/redeploy. The login endpoint has rate limiting, compares secrets using constant-time comparison, and sets an HttpOnly, Secure-in-production, SameSite=Strict session cookie. Admin sessions last up to eight hours or until logout/redeploy.
+
+If the password has been shared publicly or you suspect it may have been exposed, change it in Render before continuing.
+
 ## Option A — Run locally first
 
 1. Install Node.js 20 or newer from <https://nodejs.org/>.
@@ -73,7 +86,7 @@ For local multiplayer from a second device on the **same Wi-Fi**, use the comput
 Render supports inbound WebSocket connections on web services. Free web services may sleep after 15 minutes with no inbound HTTP/WebSocket messages; this game sends a WebSocket heartbeat while open, but after everyone closes it, the first later connection may take about a minute to wake up. See Render's current docs: <https://render.com/docs/websocket> and <https://render.com/docs/free>.
 
 1. Create a GitHub repository, for example `chase-exe-backend`.
-2. Upload the package contents to the repository root. Upload `server.js`, `package.json`, `.env.example`, `render.yaml`, `README.md`, and the `public` folder containing `index.html`. Do **not** upload `node_modules`.
+2. Upload the package contents to the repository root. Upload `server.js`, `package.json`, `.env.example`, `render.yaml`, `README.md`, and the `public` folder containing both `index.html` and `admin.html`. Do **not** upload `node_modules`.
 3. In Render, select **New + → Web Service**, connect the GitHub repository, and create the service.
 4. Use these settings if asked:
    - **Runtime:** Node
@@ -89,7 +102,7 @@ Render supports inbound WebSocket connections on web services. Free web services
 
 1. Copy `public/index.html` into your Arduino project's `data/chase.html` if your existing website already uses `index.html`. If the game should be the homepage, copy it to `data/index.html` instead.
 2. Upload the LittleFS filesystem to the ESP32.
-3. Waiting invite/random-match panels automatically expire after 120 seconds by default (`ROOM_WAIT_TIMEOUT_MS`). The current game HTML is preconfigured to connect to `wss://chasebackend-9loz.onrender.com/ws`. There is no backend settings panel in the player UI. The game view is centered with document scrolling disabled, the camera follows the local player through the larger woodland map, and Find Match places players into random open waiting rooms.
+3. Waiting invite/random-match panels automatically expire after 120 seconds by default (`ROOM_WAIT_TIMEOUT_MS`). The current game HTML is preconfigured to connect to `wss://chasebackend-9loz.onrender.com/ws`. There is no backend settings panel in the player UI. The game view is centered with document scrolling disabled, the camera follows the local player through the larger woodland map, mobile devices use an analog virtual joystick plus sprint, and Find Match places players into random open waiting rooms. The player consent/profile form opens as a compact modal rather than occupying the lobby layout.
 4. Open the game from your ESP32 website, create a room, and share the code or invite link.
 
 When the other player is offline, the game stays in a waiting state instead of showing a false round countdown. The runner can use **INVITE PLAYER** to copy the invite. The backend accepts a replacement catcher when the previous catcher disconnected after a finished round.
@@ -98,11 +111,11 @@ When the other player is offline, the game stays in a waiting state instead of s
 
 To apply the waiting-screen fix to the Render backend at `https://chasebackend-9loz.onrender.com/`:
 
-1. Replace `server.js`, `package.json`, `.env.example`, `render.yaml`, `README.md`, and `public/index.html` with the matching files from this package. Do not add a `.env` file or database password to GitHub.
+1. Replace `server.js`, `package.json`, `.env.example`, `render.yaml`, `README.md`, `public/index.html`, and `public/admin.html` with the matching files from this package. Do not add a `.env` file or database password to GitHub.
 2. In Command Prompt at the root of your existing repository, run:
 
    ```cmd
-   git add server.js package.json .env.example render.yaml README.md public/index.html
+   git add server.js package.json .env.example render.yaml README.md public/index.html public/admin.html
    git commit -m "Add persistent player memory and invite timeout"
    git push origin main
    ```
@@ -126,7 +139,7 @@ If you serve the HTML from an ESP32 public domain, add that page's exact origin 
 ## Game controls
 
 - Desktop: WASD or arrow keys; hold Shift to sprint.
-- Mobile: use the on-screen directional pad and hold Sprint.
+- Mobile: drag the virtual joystick in any direction and hold Sprint. The compact lobby and game are designed not to show a page scrollbar; on very short landscape screens, use fullscreen for more room.
 - Runner wins if the timer expires; catcher wins by tagging the runner.
 
 This is a lightweight casual-game backend, not a hardened commercial matchmaking service. It includes random room codes, per-session authorization, basic room-creation throttling, bounds/obstacle checks, and server-side catch/timer validation. For a large public launch, add stronger rate limiting, monitoring, and abuse controls.

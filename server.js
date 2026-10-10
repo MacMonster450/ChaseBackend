@@ -211,9 +211,126 @@ async function recordMatch(room, winner) {
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use(express.json({limit:'8kb'}));
+
+// Admin credentials must be configured in the hosting environment, never embedded in HTML or committed to Git.
+const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || 'MacMonster').trim();
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '');
+const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const ADMIN_COOKIE = 'chase_admin';
+const adminSessions = new Map();
+const adminLoginAttempts = new Map();
+function safeSecretEqual(a, b) {
+  const aa = Buffer.from(String(a ?? ''), 'utf8');
+  const bb = Buffer.from(String(b ?? ''), 'utf8');
+  if (aa.length !== bb.length) return false;
+  return crypto.timingSafeEqual(aa, bb);
+}
+function adminSessionFrom(req) {
+  const header = String(req.headers.cookie || '');
+  const pair = header.split(';').map(v => v.trim()).find(v => v.startsWith(ADMIN_COOKIE + '='));
+  if (!pair) return null;
+  let raw = pair.slice(ADMIN_COOKIE.length + 1);
+  try { raw = decodeURIComponent(raw); } catch { return null; }
+  const key = crypto.createHash('sha256').update(raw).digest('hex');
+  const session = adminSessions.get(key);
+  if (!session || session.expiresAt < Date.now()) { adminSessions.delete(key); return null; }
+  return {key, ...session};
+}
+function requireAdmin(req, res, next) {
+  const session = adminSessionFrom(req);
+  if (!session) return res.status(401).json({ok:false, message:'Admin session expired. Please sign in again.'});
+  req.adminSession = session;
+  res.set('Cache-Control', 'no-store');
+  next();
+}
+function adminLoginAllowed(req) {
+  const key = String(req.ip || req.socket?.remoteAddress || 'unknown');
+  const now = Date.now();
+  let record = adminLoginAttempts.get(key);
+  if (!record || now - record.startedAt > 15 * 60 * 1000) record = {startedAt:now, count:0};
+  if (record.count >= 8) { adminLoginAttempts.set(key, record); return false; }
+  record.count++;
+  adminLoginAttempts.set(key, record);
+  return true;
+}
+function adminCookie(tokenValue, req, maxAgeSeconds) {
+  const secure = req.secure || process.env.NODE_ENV === 'production';
+  return `${ADMIN_COOKIE}=${encodeURIComponent(tokenValue)}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}${secure ? '; Secure' : ''}`;
+}
+app.get('/admin', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Frame-Options', 'DENY');
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+app.post('/api/admin/login', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!ADMIN_USERNAME || !ADMIN_PASSWORD) return res.status(503).json({ok:false, message:'Admin login is not configured on the server.'});
+  if (!adminLoginAllowed(req)) return res.status(429).json({ok:false, message:'Too many sign-in attempts. Wait 15 minutes and try again.'});
+  const usernameOk = safeSecretEqual(req.body?.username, ADMIN_USERNAME);
+  const passwordOk = safeSecretEqual(req.body?.password, ADMIN_PASSWORD);
+  if (!usernameOk || !passwordOk) return res.status(401).json({ok:false, message:'Username or password is incorrect.'});
+  const rawToken = crypto.randomBytes(32).toString('base64url');
+  const key = crypto.createHash('sha256').update(rawToken).digest('hex');
+  adminSessions.set(key, {username:ADMIN_USERNAME, expiresAt:Date.now() + ADMIN_SESSION_TTL_MS});
+  adminLoginAttempts.delete(String(req.ip || req.socket?.remoteAddress || 'unknown'));
+  res.set('Set-Cookie', adminCookie(rawToken, req, ADMIN_SESSION_TTL_MS / 1000));
+  return res.json({ok:true, username:ADMIN_USERNAME, expiresInSeconds:ADMIN_SESSION_TTL_MS / 1000});
+});
+app.get('/api/admin/me', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = adminSessionFrom(req);
+  return res.json({ok:true, authenticated:Boolean(session), username:session?.username || null});
+});
+app.post('/api/admin/logout', (req, res) => {
+  const session = adminSessionFrom(req);
+  if (session) adminSessions.delete(session.key);
+  res.set('Set-Cookie', adminCookie('', req, 0));
+  res.set('Cache-Control', 'no-store');
+  return res.json({ok:true});
+});
+app.get('/api/admin/summary', requireAdmin, async (_req, res) => {
+  if (!dbReady || !dbPool) return res.status(503).json({ok:false, message:'PostgreSQL is not configured. Add DATABASE_URL in the hosting environment.'});
+  try {
+    const [players, matches, wins, ips] = await Promise.all([
+      dbPool.query('SELECT COUNT(*)::int AS n FROM chase_players'),
+      dbPool.query('SELECT COUNT(*)::int AS n FROM chase_matches'),
+      dbPool.query('SELECT COALESCE(SUM(wins),0)::int AS n FROM chase_players'),
+      dbPool.query('SELECT COUNT(*)::int AS n FROM chase_players WHERE last_ip IS NOT NULL')
+    ]);
+    return res.json({ok:true, storage:{enabled:true,type:'postgres'}, players:players.rows[0].n, matches:matches.rows[0].n, wins:wins.rows[0].n, ips:ips.rows[0].n});
+  } catch (err) { console.error('Admin summary query failed:', err.message); return res.status(500).json({ok:false,message:'Could not load database summary.'}); }
+});
+app.get('/api/admin/players', requireAdmin, async (_req, res) => {
+  if (!dbReady || !dbPool) return res.status(503).json({ok:false, message:'PostgreSQL is not configured. Add DATABASE_URL in the hosting environment.'});
+  try {
+    const result = await dbPool.query(`SELECT player_id, display_name, last_ip, first_seen, last_seen, matches_played, wins, losses FROM chase_players ORDER BY last_seen DESC LIMIT 500`);
+    return res.json({ok:true, players:result.rows});
+  } catch (err) { console.error('Admin players query failed:', err.message); return res.status(500).json({ok:false,message:'Could not load player records.'}); }
+});
+app.get('/api/admin/matches', requireAdmin, async (_req, res) => {
+  if (!dbReady || !dbPool) return res.status(503).json({ok:false, message:'PostgreSQL is not configured. Add DATABASE_URL in the hosting environment.'});
+  try {
+    const result = await dbPool.query(`
+      SELECT m.match_id, m.completed_at, m.round_number, m.winner_role,
+        r.display_name AS runner_name, c.display_name AS catcher_name
+      FROM chase_matches m
+      LEFT JOIN chase_players r ON r.player_id = m.runner_id
+      LEFT JOIN chase_players c ON c.player_id = m.catcher_id
+      ORDER BY m.completed_at DESC LIMIT 100
+    `);
+    return res.json({ok:true, matches:result.rows});
+  } catch (err) { console.error('Admin matches query failed:', err.message); return res.status(500).json({ok:false,message:'Could not load match records.'}); }
+});
 app.get('/health', (_req, res) => res.json({ok:true, service:'CHASE.EXE multiplayer backend', storage:{enabled:dbReady, type:dbReady?'postgres':'ephemeral'}}));
 app.use(express.static(path.join(__dirname, 'public'), { extensions:['html'] }));
 const server = http.createServer(app);
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, session] of adminSessions) if (session.expiresAt < now) adminSessions.delete(key);
+  for (const [key, record] of adminLoginAttempts) if (now - record.startedAt > 30 * 60 * 1000) adminLoginAttempts.delete(key);
+}, 5 * 60 * 1000).unref();
 const wss = new WebSocketServer({ noServer:true, maxPayload:8192, perMessageDeflate:false });
 const rooms = new Map();
 const createLimits = new Map();

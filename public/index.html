@@ -64,6 +64,117 @@ body.in-game:fullscreen{background:#111812}
 
 </style>
 
+
+<style>
+/* Compact, app-like viewport: no page scrollbar on phone or desktop. */
+html,body{width:100%;height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none;scrollbar-width:none}::-webkit-scrollbar{display:none;width:0;height:0}
+body:not(.in-game){min-height:0;display:flex;flex-direction:column}
+body:not(.in-game) .topbar{width:100%;flex:0 0 62px;padding:9px clamp(12px,2vw,24px);}
+body:not(.in-game) .page{height:calc(100dvh - 62px);width:100%;max-width:1240px;min-height:0;flex:1 1 auto;overflow:hidden;padding:7px clamp(12px,2vw,24px) 10px;display:flex;flex-direction:column;justify-content:center}
+#lobbyView{width:100%;min-height:0;max-height:100%;display:flex;flex-direction:column;justify-content:center;gap:0}
+#lobbyView .hero{flex:0 0 auto;margin:0 0 12px;align-items:center}
+#lobbyView .hero h1{font-size:clamp(1.7rem,3.8vw,2.7rem);margin:4px 0 6px}
+#lobbyView .hero p{font-size:.82rem;line-height:1.4;max-width:600px}
+#lobbyView .heroStats{max-width:360px;gap:8px}
+#lobbyView .heroStat{padding:10px 12px}
+#lobbyView .layout{flex:0 1 auto;min-height:0;align-items:stretch;gap:12px}
+#lobbyView .panel{padding:clamp(12px,1.5vw,18px)}
+#lobbyView .createCard{padding:12px;gap:10px}
+#lobbyView .field{margin:9px 0}
+#lobbyView .divider{margin:10px 0}
+#lobbyView .privateRoomRow{margin-top:7px;padding:5px 3px}
+#lobbyView .trustRow{margin-top:10px}
+.profileShortcut{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:9px 0 7px;padding:9px 11px;border:1px solid #41513a;border-radius:12px;background:#121b12}
+.profileShortcutIdentity{display:grid;gap:2px;min-width:0}.profileShortcutIdentity .eyebrow{font-size:.58rem}.profileShortcutIdentity strong{font-size:.84rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profileShortcutIdentity small{color:#9da992;font-size:.66rem;line-height:1.25}
+.profileShortcut button{flex:0 0 auto;min-height:36px;padding:7px 10px;font-size:.67rem}
+.statusmsg{margin-top:7px}
+.footer{display:none!important}
+/* Player profile is a proper modal, never an in-page form. */
+.profileModal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:#07100bce;backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px)}
+.profileDialog{width:min(470px,100%);max-height:calc(100dvh - 20px);overflow:auto;scrollbar-width:none;border:1px solid #53664b;border-radius:20px;background:linear-gradient(145deg,#202c20f7,#111a12fa);box-shadow:0 28px 95px #000a;padding:clamp(15px,3vw,24px)}.profileDialog::-webkit-scrollbar{display:none}
+.profileModalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.profileModalHeader h2{margin:4px 0 5px;font-size:clamp(1.22rem,4vw,1.55rem);letter-spacing:-.035em}.profileModalIntro{margin:0;color:#aab7a0;font-size:.78rem;line-height:1.4;max-width:350px}.modalClose{flex:0 0 36px;width:36px;height:36px;min-height:36px;padding:0;border-radius:10px;font-size:1.4rem;line-height:1}
+.profileModalBody{display:grid;gap:8px}.profileModalBody .memoryBadge{width:max-content;max-width:100%;margin-bottom:2px}.profileModalBody .profileLabel{margin:2px 0 0}.profileModalBody .profileInput{min-height:43px}.profileModalBody .consentLine{margin-top:5px;font-size:.72rem;line-height:1.45}.profileStatus{min-height:0;color:#f0d99b;font-size:.72rem;line-height:1.35}.profileStatus:empty{display:none}.profileModalActions{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:8px}.profileModalActions button{min-height:39px;font-size:.68rem;padding:8px 10px}.profileFooterNote{font-size:.65rem;color:#84947e;text-align:center;margin:10px 0 0}
+/* Analog joystick; works with touch, pen and mouse. */
+.touchControls{display:flex;align-items:center;justify-content:space-between;gap:24px;width:min(440px,100%);margin:6px auto 0;padding:0 8px;flex:0 0 auto;touch-action:none;user-select:none;-webkit-user-select:none}
+.joystickGroup{display:flex;flex-direction:column;align-items:center;gap:4px}.joystickArea{width:112px;height:112px;display:grid;place-items:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.joystickBase{width:104px;height:104px;border:1px solid #5b7051;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 40% 33%,#344731,#172117 75%);box-shadow:inset 0 4px 14px #0007,0 8px 20px #0004}
+.joystickBase:before,.joystickBase:after{content:"";position:absolute;background:#81927435;border-radius:5px}.joystickBase:before{width:1px;height:72%;left:50%;top:14%}.joystickBase:after{height:1px;width:72%;left:14%;top:50%}
+.joystickKnob{position:absolute;left:50%;top:50%;width:43px;height:43px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #c6d9b4;background:linear-gradient(145deg,#c9dab7,#6e8760);box-shadow:0 5px 13px #0008,inset 0 2px 5px #ffffff80;pointer-events:none}
+.controlCaption{font-size:.58rem;font-weight:850;letter-spacing:.2em;color:#a4b398}
+.sprintBtn{width:88px;min-width:88px;height:82px;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid #776849;border-radius:24px;background:radial-gradient(circle at 50% 22%,#5b4d2d,#29271b 75%);color:#e4d2a0;touch-action:none;user-select:none;-webkit-user-select:none}
+.sprintGlyph{font-size:1.7rem;line-height:1}.sprintLabel{font-size:.7rem;font-weight:950;letter-spacing:.07em}.sprintBtn small{font-size:.48rem;color:#b8a97c;letter-spacing:.08em}.sprintBtn:active{filter:brightness(1.18)}
+.mobileNote{font-size:.62rem;text-align:center;color:#95a28b;margin:1px 0 0}
+body.in-game{overflow:hidden;width:100vw;height:100dvh;min-height:0;touch-action:pan-x pan-y}
+body.in-game .page{height:100dvh;max-height:100dvh;padding:max(5px,env(safe-area-inset-top)) max(7px,env(safe-area-inset-right)) max(5px,env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));overflow:hidden;justify-content:center}
+#gameView:not(.hidden){gap:7px}
+#gameView .canvasWrap{height:auto;aspect-ratio:16/10;min-height:160px;max-height:calc(100dvh - 245px)}
+#gameView .canvasWrap canvas{width:100%;height:100%;object-fit:fill;display:block}
+#gameView .gameShell{flex:0 1 auto;width:min(100%,calc((100dvh - 245px)*1.6));max-height:none}
+#gameView .gameHead{min-height:50px}.gameFoot{min-height:40px}
+@media(max-width:850px){
+  body:not(.in-game) .page{padding:4px 12px 8px}
+  #lobbyView .heroStats{display:none}
+  #lobbyView .hero p{display:none}
+  #lobbyView .layout{grid-template-columns:1fr;gap:0}
+  #lobbyView .guidePanel{display:none!important}
+  #lobbyView .lobbyPanel{max-width:680px;width:100%;margin:0 auto}
+}
+@media(max-width:560px){
+  body:not(.in-game) .topbar{flex-basis:54px;padding:6px 11px}
+  body:not(.in-game) .page{height:calc(100dvh - 54px);padding:2px 9px 6px}
+  #lobbyView .hero{margin-bottom:7px}
+  #lobbyView .hero h1{font-size:clamp(1.5rem,7vw,2.15rem);margin:3px 0 4px}
+  #lobbyView .heroCopy>.eyebrow{font-size:.55rem}
+  #lobbyView .panel{padding:12px;border-radius:15px}
+  #lobbyView .panelTopline h2{font-size:.95rem}
+  #lobbyView .serverMark{display:none}
+  #lobbyView .createCard{grid-template-columns:34px minmax(0,1fr);padding:9px;gap:8px}
+  #lobbyView .createIcon{width:34px;height:34px}
+  #lobbyView .createCopy p{font-size:.65rem;margin:3px 0 0;line-height:1.3}
+  #lobbyView .createButton{grid-column:1/-1;min-height:40px}
+  #lobbyView .privateRoomRow{flex-direction:row;align-items:center;margin-top:5px;font-size:.68rem}
+  #lobbyView .privateRoomRow button{width:auto;min-height:34px;font-size:.62rem;padding:6px 8px}
+  #lobbyView .divider{margin:7px 0;font-size:.58rem}
+  #lobbyView .field{margin:5px 0}
+  #lobbyView .field label{font-size:.67rem}
+  #lobbyView .joinline{grid-template-columns:minmax(0,1fr) auto;gap:6px}
+  #lobbyView .joinline input{min-height:40px;padding:8px;font-size:.76rem}
+  #lobbyView .joinButton{min-height:40px;padding:7px;font-size:.65rem}
+  #lobbyView .fieldHint{display:none}
+  .profileShortcut{margin:6px 0 4px;padding:7px 9px}
+  .profileShortcutIdentity strong{font-size:.77rem}.profileShortcutIdentity small{font-size:.59rem}
+  .profileShortcut button{min-height:32px;font-size:.61rem}
+  #lobbyView .statusmsg{font-size:.68rem;margin-top:5px;padding:7px 9px}
+  #lobbyView .trustRow{display:none}
+  .profileDialog{padding:16px;border-radius:17px;max-height:calc(100dvh - 16px)}
+  .profileModalIntro{font-size:.72rem}
+  .profileModalBody .consentLine{font-size:.68rem;line-height:1.38;gap:8px}
+  .profileModalActions{gap:7px}.profileModalActions button{font-size:.6rem;padding:7px 8px}
+  #gameView .hero{margin:0;gap:4px}
+  #gameView .gameActions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  #gameView .gameActions button{min-height:35px;font-size:.61rem!important;padding:6px 4px!important}
+  #gameView .gameHead{min-height:38px;padding:5px 7px;gap:6px}.playerlabels{display:none}
+  #gameView .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:100%}
+  #gameView .metric{min-width:0;padding:3px 5px}.metric small{font-size:.48rem}.metric strong{font-size:.87rem}
+  #gameView .canvasWrap{height:min(calc((100vw - 20px)*.625),calc(100dvh - 345px));min-height:145px}
+  #gameView .gameFoot{min-height:34px;padding:4px 7px;gap:6px}.gameFoot .hint{font-size:.58rem;line-height:1.25}.gameFoot .actionrow button{min-height:30px;padding:5px 7px;font-size:.6rem}
+  .touchControls{margin-top:2px;max-width:340px;padding:0 8px;gap:16px}
+  .joystickArea{width:98px;height:98px}.joystickBase{width:90px;height:90px}.joystickKnob{width:39px;height:39px}
+  .sprintBtn{width:75px;min-width:75px;height:70px;min-height:70px;border-radius:21px}
+  .sprintGlyph{font-size:1.45rem}.sprintLabel{font-size:.63rem}.sprintBtn small{font-size:.42rem}
+  .mobileNote{font-size:.56rem}
+}
+@media(max-height:560px) and (orientation:landscape){
+  body:not(.in-game) .topbar{flex-basis:43px;padding:4px 12px}.brandIcon{width:32px;height:32px}.subbrand{display:none}
+  body:not(.in-game) .page{height:calc(100dvh - 43px)}#lobbyView .hero{display:none!important}#lobbyView .lobbyPanel{padding:8px}#lobbyView .createCard{padding:6px}#lobbyView .profileShortcut{margin:3px 0;padding:5px}
+  #gameView:not(.hidden){gap:3px}#gameView .gameActions button{min-height:29px;padding:3px 5px!important}#gameView .gameHead{min-height:30px;padding:3px 6px}#gameView .metric{padding:2px 4px}#gameView .metric strong{font-size:.75rem}#gameView .gameFoot{min-height:28px;padding:2px 6px}
+  #gameView .gameShell{width:min(100%,calc((100dvh - 205px)*1.6))}#gameView .canvasWrap{height:calc(100dvh - 205px);min-height:95px;max-height:none;aspect-ratio:auto}
+  .touchControls{width:min(300px,100%);height:75px;margin-top:0}.joystickArea{width:74px;height:74px}.joystickBase{width:68px;height:68px}.joystickKnob{width:30px;height:30px}.controlCaption{display:none}.sprintBtn{height:58px;min-height:58px;width:65px;min-width:65px;border-radius:16px}
+  .mobileNote{display:none!important}
+}
+@media(hover:hover) and (pointer:fine){.touchControls,.mobileNote{display:none!important}}
+</style>
+
 </head>
 <body>
 <header class="topbar"><div class="brand"><div class="brandIcon">⌁</div><div><div class="brandName">CHASE.EXE</div><div class="subbrand">WOODLAND PURSUIT / ONLINE MULTIPLAYER</div></div></div><div class="onlinepill"><i id="netDot" class="dot"></i><span id="netText">NOT CONNECTED</span></div></header>
@@ -92,12 +203,9 @@ body.in-game:fullscreen{background:#111812}
       <div class="privateRoomRow"><span>Playing with a friend?</span><button id="createBtn" class="quiet">CREATE PRIVATE ROOM</button></div>
       <div class="divider"><span>OR JOIN WITH A CODE</span></div>
       <div class="field joinField"><label for="joinCode">8-CHARACTER ROOM CODE</label><div class="joinline"><input id="joinCode" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="E.G. K7M4Q2WD" aria-label="Eight-character room code"><button id="joinBtn" class="joinButton">JOIN ROOM <span aria-hidden="true">↗</span></button></div><p class="fieldHint">Enter a room code shared by a friend.</p></div>
-      <div class="playerMemory panelInset" aria-label="Player profile and data notice">
-        <div class="playerMemoryTop"><div><div class="eyebrow">PLAYER PROFILE</div><div class="createTitle">Remember this player</div></div><span class="memoryBadge">ON THIS DEVICE</span></div>
-        <label class="profileLabel" for="playerName">CALLSIGN</label>
-        <input id="playerName" class="profileInput" maxlength="24" autocomplete="nickname" placeholder="Forest Scout" aria-label="Player callsign">
-        <label class="consentLine" for="privacyConsent"><input id="privacyConsent" type="checkbox"><span>I agree that CHASE.EXE stores a random player ID, callsign, IP address and match results to remember my profile and prevent abuse. IP is cleared after 30 days without a visit; my profile and match records stay until I use FORGET SAVED PROFILE. My IP is never shown to other players.</span></label>
-        <div class="memoryActions"><span class="fieldHint">First-time players must accept before connecting.</span><button id="forgetProfileBtn" class="quiet tiny" type="button">FORGET SAVED PROFILE</button></div>
+      <div class="profileShortcut">
+        <div class="profileShortcutIdentity"><span class="eyebrow">PLAYER PROFILE</span><strong id="profileNameLabel">Forest Scout</strong><small id="profileConsentLabel">Profile not configured on this device</small></div>
+        <button id="openProfileBtn" class="quiet tiny" type="button">EDIT PROFILE</button>
       </div>
       <div class="statusmsg" id="lobbyStatus" role="status" aria-live="polite">Ready when you are. Create a room or join your friend.</div>
       <div class="trustRow"><span><i>✓</i> NO ACCOUNT NEEDED</span><span><i>⌁</i> LIVE MULTIPLAYER</span><span><i>↗</i> SHARE CODE</span></div>
@@ -120,10 +228,32 @@ body.in-game:fullscreen{background:#111812}
     <div class="canvasWrap"><canvas id="gameCanvas" width="960" height="600" aria-label="Woodland two-player chase"></canvas><div id="gameOverlay" class="canvasOverlay"><div class="overlayCard"><div class="eyebrow" id="overlayEyebrow">Waiting for rival</div><h2 id="overlayTitle">Room created</h2><p class="muted" id="overlayText">Send this code to your friend. The match starts as soon as they join.</p><div class="bigcode" id="bigCode">ABCDEFGH</div><button class="primary" id="overlayCopy">COPY INVITE LINK</button><p class="muted" id="overlayFoot" style="margin-bottom:0">Keep this tab open while playing.</p></div></div></div>
     <div class="gameFoot"><div class="hint" id="connectionHint">Connecting to live room…</div><div class="actionrow" style="flex:0 1 auto"><button id="soundBtn" class="tiny quiet">SOUND: ON</button><button id="restartBtn" class="tiny quiet hidden">NEW ROUND</button></div></div>
   </div>
-  <div class="controls" aria-label="Touch controls"><div class="dpad"><button class="up" data-key="ArrowUp" aria-label="Move up">▲</button><button class="left" data-key="ArrowLeft" aria-label="Move left">◀</button><button class="down" data-key="ArrowDown" aria-label="Move down">▼</button><button class="right" data-key="ArrowRight" aria-label="Move right">▶</button></div><button class="sprintBtn" data-key="Shift">ϟ SPRINT<span>HOLD TO BOOST</span></button></div><div class="mobileNote">Use the pad to move. Hold SPRINT for a short speed boost.</div>
+  <div class="touchControls" aria-label="Mobile touch controls">
+    <div class="joystickGroup"><div id="joystickArea" class="joystickArea" role="application" aria-label="Virtual joystick. Drag in any direction to move."><div class="joystickBase"><div id="joystickKnob" class="joystickKnob"></div></div></div><span class="controlCaption">MOVE</span></div>
+    <button id="sprintBtn" class="sprintBtn" data-key="Shift" type="button" aria-label="Hold to sprint"><span class="sprintGlyph">ϟ</span><span class="sprintLabel">SPRINT</span><small>HOLD TO BOOST</small></button>
+  </div><div class="mobileNote">Drag the joystick to move. Hold SPRINT for a short speed boost.</div>
 </section>
 <div class="footer">CHASE.EXE • single-file frontend • server-validated multiplayer • <code>ESP32 LittleFS ready</code></div>
 </main>
+
+<div id="profileModal" class="profileModal hidden" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+  <section class="profileDialog">
+    <div class="profileModalHeader">
+      <div><div class="eyebrow">PLAYER PROFILE</div><h2 id="profileModalTitle">Remember this player</h2><p class="profileModalIntro">Choose your callsign and review the data notice before playing online.</p></div>
+      <button id="closeProfileBtn" class="modalClose" type="button" aria-label="Close profile window">×</button>
+    </div>
+    <div class="profileModalBody">
+      <span class="memoryBadge">SAVED ON THIS DEVICE</span>
+      <label class="profileLabel" for="playerName">CALLSIGN</label>
+      <input id="playerName" class="profileInput" maxlength="24" autocomplete="nickname" placeholder="Forest Scout" aria-label="Player callsign">
+      <label class="consentLine" for="privacyConsent"><input id="privacyConsent" type="checkbox"><span>I agree that CHASE.EXE stores a random player ID, callsign, IP address and match results to remember my profile and prevent abuse. My IP is cleared after 30 days without a visit. My profile and match records remain until I use FORGET SAVED PROFILE. My IP is never shown to other players.</span></label>
+      <div id="profileStatus" class="profileStatus" role="status" aria-live="polite"></div>
+    </div>
+    <div class="profileModalActions"><button id="forgetProfileBtn" class="quiet tiny" type="button">FORGET SAVED PROFILE</button><button id="saveProfileBtn" class="primary" type="button">SAVE &amp; CONTINUE</button></div>
+    <p class="profileFooterNote">You can change or delete this profile at any time.</p>
+  </section>
+</div>
+
 <div id="toast" class="toast hidden" role="status"></div>
 <script>
 (function(){'use strict';
@@ -159,10 +289,14 @@ function randomHex(bytes){const a=new Uint8Array(bytes);crypto.getRandomValues(a
 function ensureLocalProfile(){let id=localStorage.getItem(PROFILE_ID_KEY),token=localStorage.getItem(PROFILE_TOKEN_KEY);if(!/^[a-f0-9]{32}$/i.test(id||'')){id=randomHex(16);localStorage.setItem(PROFILE_ID_KEY,id)}if(!/^[a-f0-9]{64}$/i.test(token||'')){token=randomHex(32);localStorage.setItem(PROFILE_TOKEN_KEY,token)}return{id,profileToken:token}}
 function normalizedName(v){return String(v||'').replace(/[<>\"'`]/g,'').replace(/[\r\n\t]/g,' ').replace(/\s+/g,' ').trim().slice(0,24)||'Forest Scout'}
 function hasProfileConsent(){return $('privacyConsent').checked===true}
-function requireProfileConsent(){if(!hasProfileConsent()){setMsg('lobbyStatus','Please review the player-data notice and tick the consent box before connecting.','error');$('privacyConsent').focus();return false}const p=ensureLocalProfile();const name=normalizedName($('playerName').value);$('playerName').value=name;localStorage.setItem(PROFILE_NAME_KEY,name);localStorage.setItem(PROFILE_CONSENT_KEY,PROFILE_CONSENT_VERSION);return true}
+function requireProfileConsent(){if(!hasProfileConsent()){openProfileModal();$('profileStatus').textContent='Please review the notice and accept before connecting.';setMsg('lobbyStatus','Review the player profile notice before connecting.','error');return false}const p=ensureLocalProfile();const name=normalizedName($('playerName').value);$('playerName').value=name;localStorage.setItem(PROFILE_NAME_KEY,name);localStorage.setItem(PROFILE_CONSENT_KEY,PROFILE_CONSENT_VERSION);updateProfileShortcut();return true}
 function profilePayload(){const p=ensureLocalProfile();return{playerId:p.id,profileToken:p.profileToken,displayName:normalizedName($('playerName').value||localStorage.getItem(PROFILE_NAME_KEY)||'Forest Scout'),consent:hasProfileConsent()}}
-function initProfileUI(){const savedConsent=localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION;$('privacyConsent').checked=savedConsent;$('playerName').value=localStorage.getItem(PROFILE_NAME_KEY)||'Forest Scout';if(savedConsent)ensureLocalProfile();$('playerName').addEventListener('change',()=>{const n=normalizedName($('playerName').value);$('playerName').value=n;if(localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION)localStorage.setItem(PROFILE_NAME_KEY,n)});$('privacyConsent').addEventListener('change',()=>{if(!$('privacyConsent').checked){localStorage.removeItem(PROFILE_CONSENT_KEY);setMsg('lobbyStatus','Consent withdrawn on this device. You must accept the notice to connect again.')}});$('forgetProfileBtn').addEventListener('click',forgetSavedProfile)}
-function forgetSavedProfile(){if(!confirm('Forget this browser profile and ask the server to delete its saved player record and match statistics?'))return;let id=localStorage.getItem(PROFILE_ID_KEY),profileToken=localStorage.getItem(PROFILE_TOKEN_KEY);const clearLocal=()=>{localStorage.removeItem(PROFILE_ID_KEY);localStorage.removeItem(PROFILE_TOKEN_KEY);localStorage.removeItem(PROFILE_NAME_KEY);localStorage.removeItem(PROFILE_CONSENT_KEY);$('playerName').value='Forest Scout';$('privacyConsent').checked=false};if(!id||!profileToken){clearLocal();setMsg('lobbyStatus','No saved server profile was found on this device.');showToast('Local profile cleared.');return}const ws=new WebSocket(backendUrl);let done=false;ws.onopen=()=>ws.send(JSON.stringify({type:'forgetProfile',profile:{playerId:id,profileToken}}));ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return}if(d.type==='forgotten'){done=true;clearLocal();setMsg('lobbyStatus',d.message||'Saved profile cleared.');showToast(d.message||'Saved profile cleared.');try{ws.close()}catch{}}};ws.onerror=()=>{if(!done)showToast('Could not reach the backend. Local profile was not removed from the server.');};setTimeout(()=>{if(!done){try{ws.close()}catch{}showToast('Profile removal timed out. Try again when the server is online.')}},8000)}
+function openProfileModal(){ $('profileModal').classList.remove('hidden'); setTimeout(()=>{try{$('playerName').focus({preventScroll:true})}catch(e){}},20); }
+function closeProfileModal(){ $('profileModal').classList.add('hidden'); }
+function updateProfileShortcut(){const name=normalizedName($('playerName').value||localStorage.getItem(PROFILE_NAME_KEY)||'Forest Scout');$('profileNameLabel').textContent=name;$('profileConsentLabel').textContent=localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION?'Saved on this device':'Consent required before online play';}
+function saveProfileSettings(){if(!$('privacyConsent').checked){$('profileStatus').textContent='Please tick the consent box to enable online multiplayer.';return}const p=ensureLocalProfile();const name=normalizedName($('playerName').value);$('playerName').value=name;localStorage.setItem(PROFILE_NAME_KEY,name);localStorage.setItem(PROFILE_CONSENT_KEY,PROFILE_CONSENT_VERSION);updateProfileShortcut();$('profileStatus').textContent='Profile saved on this device.';closeProfileModal();showToast('Player profile saved.');}
+function initProfileUI(){const savedConsent=localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION;$('privacyConsent').checked=savedConsent;$('playerName').value=localStorage.getItem(PROFILE_NAME_KEY)||'Forest Scout';if(savedConsent)ensureLocalProfile();updateProfileShortcut();$('playerName').addEventListener('change',()=>{const n=normalizedName($('playerName').value);$('playerName').value=n;if(localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION)localStorage.setItem(PROFILE_NAME_KEY,n);updateProfileShortcut()});$('privacyConsent').addEventListener('change',()=>{if(!$('privacyConsent').checked){localStorage.removeItem(PROFILE_CONSENT_KEY);updateProfileShortcut();setMsg('lobbyStatus','Consent withdrawn on this device. Accept the notice to connect again.')}});$('forgetProfileBtn').addEventListener('click',forgetSavedProfile);$('openProfileBtn').addEventListener('click',openProfileModal);$('closeProfileBtn').addEventListener('click',closeProfileModal);$('saveProfileBtn').addEventListener('click',saveProfileSettings);$('profileModal').addEventListener('click',e=>{if(e.target===$('profileModal'))closeProfileModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('profileModal').classList.contains('hidden'))closeProfileModal()});if(!savedConsent)openProfileModal()}
+function forgetSavedProfile(){if(!confirm('Forget this browser profile and ask the server to delete its saved player record and match statistics?'))return;let id=localStorage.getItem(PROFILE_ID_KEY),profileToken=localStorage.getItem(PROFILE_TOKEN_KEY);const clearLocal=()=>{localStorage.removeItem(PROFILE_ID_KEY);localStorage.removeItem(PROFILE_TOKEN_KEY);localStorage.removeItem(PROFILE_NAME_KEY);localStorage.removeItem(PROFILE_CONSENT_KEY);$('playerName').value='Forest Scout';$('privacyConsent').checked=false;updateProfileShortcut();openProfileModal()};if(!id||!profileToken){clearLocal();setMsg('lobbyStatus','No saved server profile was found on this device.');showToast('Local profile cleared.');return}const ws=new WebSocket(backendUrl);let done=false;ws.onopen=()=>ws.send(JSON.stringify({type:'forgetProfile',profile:{playerId:id,profileToken}}));ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return}if(d.type==='forgotten'){done=true;clearLocal();setMsg('lobbyStatus',d.message||'Saved profile cleared.');showToast(d.message||'Saved profile cleared.');try{ws.close()}catch{}}};ws.onerror=()=>{if(!done)showToast('Could not reach the backend. Local profile was not removed from the server.');};setTimeout(()=>{if(!done){try{ws.close()}catch{}showToast('Profile removal timed out. Try again when the server is online.')}},8000)}
 initProfileUI();
 setMsg('lobbyStatus','Ready when you are. Create a room or join your friend.');
 netStatus(false,'READY TO CONNECT');
@@ -241,9 +375,13 @@ function updateFromRoom(r){if(!r||!r.game)return;const g=r.game;const online=r.o
   render();
 }
 function finishDisplay(g,playSound=true){const myScore=Number(room.players&&room.players[role]&&room.players[role].score||score||0);score=myScore;$('scoreText').textContent=score;if(score>best){best=score;localStorage.setItem('chaseBest_'+role,String(best));$('bestText').textContent=best;}const iWon=g.winner===role;const message=g.result||((iWon?'You won!':'Your friend won!'));const online=room&&room.online||{};if(role==='runner'&&(!online.runner||!online.catcher)){if(quickMatchMode){showOverlay('MATCHMAKING','Looking for another rival','Your previous opponent disconnected. The room is open for another random player to join.','','CANCEL SEARCH');$('overlayFoot').textContent='You can cancel and return to the main menu at any time.';}else{showOverlay('PLAYER DISCONNECTED','Waiting for your friend',message+' Both players must be connected before the next round.',code,'COPY INVITE LINK');$('overlayFoot').textContent='Share the invite link so your friend can rejoin this room.';}}else{showOverlay(iWon?'VICTORY':'ROUND OVER',iWon?'YOU WIN':'YOU WERE '+(role==='runner'?'CAUGHT':'TOO LATE'),message+' Your score: '+score+'.',String(g.winner||'DONE'),role==='runner'?'NEW ROUND':'COPY INVITE LINK');$('overlayFoot').textContent=role==='runner'?'Start another round when your friend is ready.':'Wait for the runner to start the next round.';}if(playSound)beep(iWon?760:250,.24,iWon?'sine':'triangle',.04)}
-function sendInput(){if(!socket||socket.readyState!==WebSocket.OPEN||!code||!role)return;const g=room&&room.game;const x=(inputs.has('ArrowRight')||inputs.has('KeyD')?1:0)-(inputs.has('ArrowLeft')||inputs.has('KeyA')?1:0);const y=(inputs.has('ArrowDown')||inputs.has('KeyS')?1:0)-(inputs.has('ArrowUp')||inputs.has('KeyW')?1:0);socket.send(JSON.stringify({type:'input',x,y,sprint:inputs.has('Shift')&&(!g||g.state==='playing')}));}
+let joystickVector={x:0,y:0};
+function sendInput(){if(!socket||socket.readyState!==WebSocket.OPEN||!code||!role)return;const g=room&&room.game;let x=(inputs.has('ArrowRight')||inputs.has('KeyD')?1:0)-(inputs.has('ArrowLeft')||inputs.has('KeyA')?1:0)+joystickVector.x;let y=(inputs.has('ArrowDown')||inputs.has('KeyS')?1:0)-(inputs.has('ArrowUp')||inputs.has('KeyW')?1:0)+joystickVector.y;const len=Math.hypot(x,y);if(len>1){x/=len;y/=len}socket.send(JSON.stringify({type:'input',x,y,sprint:inputs.has('Shift')&&(!g||g.state==='playing')}));}
+function resetJoystick(){joystickVector={x:0,y:0};const knob=$('joystickKnob');if(knob)knob.style.transform='translate(-50%,-50%)';}
+function setupJoystick(){const area=$('joystickArea'),knob=$('joystickKnob');if(!area||!knob)return;let pointerId=null;const move=e=>{const rect=area.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const limit=Math.min(rect.width,rect.height)*.34;const d=Math.hypot(dx,dy);if(d>limit){dx=dx/d*limit;dy=dy/d*limit}let x=dx/limit,y=dy/limit;if(Math.hypot(x,y)<.12){x=0;y=0}joystickVector={x,y};knob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;};area.addEventListener('pointerdown',e=>{e.preventDefault();pointerId=e.pointerId;try{area.setPointerCapture(pointerId)}catch{}startAudio();move(e)});area.addEventListener('pointermove',e=>{if(pointerId===e.pointerId){e.preventDefault();move(e)}});const end=e=>{if(pointerId===null||e.pointerId!==pointerId)return;pointerId=null;resetJoystick()};['pointerup','pointercancel','lostpointercapture'].forEach(ev=>area.addEventListener(ev,end));window.addEventListener('blur',resetJoystick);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetJoystick()});}
+
 function restartRound(){if(!socket||socket.readyState!==WebSocket.OPEN){showToast('Wait for the connection to return.');return;}if(role!=='runner'||!room||!room.game){showToast('Room status is not ready yet.');return;}const g=room.game,online=room.online||{};if(quickMatchMode&&g.state==='waiting'&&(!online.runner||!online.catcher)){leaveRoom(false);return;}if(!online.runner||!online.catcher){showOverlay('WAITING FOR BOTH PLAYERS','Waiting for your friend','No new round has started. Share the room invite so your friend can join or reconnect. The game will start when both players are connected.',code,'COPY INVITE LINK');$('overlayFoot').textContent='Your friend can rejoin using the same room code.';return;}if(g.state!=='ended'){if(g.state==='waiting'){showOverlay('ROOM READY','Waiting for the round to start','The server has not started a new round yet. Please wait a moment.',code,'COPY INVITE LINK');}else{showToast('A round is already in progress.');}return;}socket.send(JSON.stringify({type:'restart'}));$('restartBtn').disabled=true;$('restartBtn').textContent='STARTING…';}
-function leaveRoom(fromServer=false,notice=''){ leaving=true;quickMatchMode=false;clearTimeout(reconnectTimer);clearInterval(heartbeatTimer);clearInterval(inputTimer);inputs.clear();try{sessionStorage.removeItem('chaseSession')}catch(e){}if(socket){const old=socket;if(!fromServer&&old.readyState===WebSocket.OPEN)try{old.send(JSON.stringify({type:'leave'}))}catch(e){}socket=null;try{old.onclose=null;old.close()}catch(e){}}code='';role='';sessionToken='';room=null;connected=false;lastStatePhase='';finishKey='';netStatus(false,'NOT CONNECTED');gameView.classList.add('hidden');lobbyView.classList.remove('hidden');document.body.classList.remove('in-game');$('quickMatchBtn').disabled=false;$('createBtn').disabled=false;$('joinBtn').disabled=false;setMsg('lobbyStatus',notice||'You left the room. Find a random player or create a private room.');}
+function leaveRoom(fromServer=false,notice=''){ leaving=true;quickMatchMode=false;clearTimeout(reconnectTimer);clearInterval(heartbeatTimer);clearInterval(inputTimer);inputs.clear();resetJoystick();try{sessionStorage.removeItem('chaseSession')}catch(e){}if(socket){const old=socket;if(!fromServer&&old.readyState===WebSocket.OPEN)try{old.send(JSON.stringify({type:'leave'}))}catch(e){}socket=null;try{old.onclose=null;old.close()}catch(e){}}code='';role='';sessionToken='';room=null;connected=false;lastStatePhase='';finishKey='';netStatus(false,'NOT CONNECTED');gameView.classList.add('hidden');lobbyView.classList.remove('hidden');document.body.classList.remove('in-game');$('quickMatchBtn').disabled=false;$('createBtn').disabled=false;$('joinBtn').disabled=false;setMsg('lobbyStatus',notice||'You left the room. Find a random player or create a private room.');}
 function currentPlayer(k){const v=room&&room.players&&room.players[k];if(!v)return spawn[k];return{x:Number(v.x)||0,y:Number(v.y)||0,dx:Number(v.dx)||0,dy:Number(v.dy)||0,stamina:Number(v.stamina??100),score:Number(v.score||0),updatedAt:Number(v.updatedAt)||0,active:v.active!==false}}
 function getKeyDir(){let x=0,y=0;if(inputs.has('ArrowLeft')||inputs.has('KeyA'))x--;if(inputs.has('ArrowRight')||inputs.has('KeyD'))x++;if(inputs.has('ArrowUp')||inputs.has('KeyW'))y--;if(inputs.has('ArrowDown')||inputs.has('KeyS'))y++;return{x,y}}
 function roundedRect(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h)}
@@ -305,7 +443,7 @@ function render(){if(!ctx)return;ctx.clearRect(0,0,W,H);ctx.fillStyle='#273a29';
   if(room&&room.game&&room.game.state==='waiting'){ctx.save();ctx.fillStyle='#e7e6ce';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(quickMatchMode?'SEARCHING FOR A RIVAL':'WAITING FOR BOTH PLAYERS',W/2,34);ctx.restore()}}
 function tick(t){requestAnimationFrame(tick);if(!lastFrame)lastFrame=t;lastFrame=t;if(gameView.classList.contains('hidden'))return;if(!room){render();return}const g=room.game;if(g&&g.state==='countdown'){const n=Math.max(0,Math.ceil((Number(g.startAt)-serverNow())/1000));if($('overlayText'))$('overlayText').textContent=n>0?'Round starts in '+n+'…':'GO!'}if(g&&g.state==='playing'){$('timerText').textContent=String(Math.max(0,Math.ceil((Number(g.finishAt)-serverNow())/1000)));}if(g&&g.state==='waiting'&&room.waitTimeoutAt&&!(room.online&&room.online.runner&&room.online.catcher)&&!$('gameOverlay').classList.contains('hidden')){const secs=Math.max(0,Math.ceil((Number(room.waitTimeoutAt)-serverNow())/1000));const mm=String(Math.floor(secs/60)).padStart(2,'0'),ss=String(secs%60).padStart(2,'0');$('overlayText').textContent=(quickMatchMode?'Searching for a random rival.':'Your invite is open for a limited time.')+' Time remaining: '+mm+':'+ss+'.';}render()}
 $('createBtn').addEventListener('click',createRoom);$('quickMatchBtn').addEventListener('click',quickMatch);$('joinBtn').addEventListener('click',joinRoom);$('joinCode').addEventListener('input',e=>{const p=e.target.selectionStart;e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);try{e.target.setSelectionRange(p,p)}catch(err){}});$('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom()});$('shareBtn').addEventListener('click',()=>copyText(roomLink()));$('fullscreenBtn').addEventListener('click',async()=>{const target=$('gameView');try{if(!document.fullscreenElement){if(target.requestFullscreen)await target.requestFullscreen({navigationUI:'hide'});else showToast('Fullscreen is not supported in this browser.')}else await document.exitFullscreen()}catch(e){showToast('Fullscreen could not be opened.')}});document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'⤢ EXIT FULLSCREEN':'⛶ FULLSCREEN'});$('overlayCopy').addEventListener('click',()=>{const online=room&&room.online||{};if(quickMatchMode&&room&&room.game&&room.game.state==='waiting'&&(!online.runner||!online.catcher)){leaveRoom(false);return}if(room&&room.game&&room.game.state==='ended'&&role==='runner'&&online.runner&&online.catcher){restartRound();return}copyText(roomLink())});$('leaveBtn').addEventListener('click',()=>leaveRoom(false));$('restartBtn').addEventListener('click',restartRound);$('soundBtn').addEventListener('click',()=>{soundOn=!soundOn;$('soundBtn').textContent='SOUND: '+(soundOn?'ON':'OFF');if(soundOn){startAudio();beep(550,.1,'sine',.03)}});
-window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea')return;const k=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Shift'].includes(e.code)?e.code:null;if(k){inputs.add(k);if(k.startsWith('Arrow'))e.preventDefault();startAudio()}});window.addEventListener('keyup',e=>inputs.delete(e.code));window.addEventListener('blur',()=>inputs.clear());document.querySelectorAll('[data-key]').forEach(btn=>{const k=btn.getAttribute('data-key');const down=e=>{e.preventDefault();inputs.add(k);startAudio();try{btn.setPointerCapture(e.pointerId)}catch(err){}};const up=e=>{e.preventDefault();inputs.delete(k)};btn.addEventListener('pointerdown',down);['pointerup','pointercancel','lostpointercapture','pointerleave'].forEach(ev=>btn.addEventListener(ev,up))});
+window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea')return;const k=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Shift'].includes(e.code)?e.code:null;if(k){inputs.add(k);if(k.startsWith('Arrow'))e.preventDefault();startAudio()}});window.addEventListener('keyup',e=>inputs.delete(e.code));window.addEventListener('blur',()=>{inputs.clear();resetJoystick()});document.querySelectorAll('[data-key]').forEach(btn=>{const k=btn.getAttribute('data-key');const down=e=>{e.preventDefault();inputs.add(k);startAudio();try{btn.setPointerCapture(e.pointerId)}catch(err){}};const up=e=>{if(e) e.preventDefault();inputs.delete(k)};btn.addEventListener('pointerdown',down);['pointerup','pointercancel','lostpointercapture','pointerleave'].forEach(ev=>btn.addEventListener(ev,up))});setupJoystick();
 const params=new URLSearchParams(location.search);const invited=(params.get('join')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);if(invited.length===8){$('joinCode').value=invited;setMsg('lobbyStatus','Invite code found. Join the room to enter the chase.');}
 try{const saved=JSON.parse(sessionStorage.getItem('chaseSession')||'null');if(localStorage.getItem(PROFILE_CONSENT_KEY)===PROFILE_CONSENT_VERSION&&saved&&saved.code&&saved.sessionToken){code=saved.code;role=saved.role;sessionToken=saved.sessionToken;quickMatchMode=Boolean(saved.quickMatchMode);setMsg('lobbyStatus','Restoring your previous multiplayer session…');connect({type:'reconnect',code,sessionToken},true)}}catch(e){}
 requestAnimationFrame(tick);
