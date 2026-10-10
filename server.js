@@ -1,6 +1,8 @@
 import express from 'express';
 import http from 'node:http';
 import crypto from 'node:crypto';
+import { isIP } from 'node:net';
+import { Pool } from 'pg';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,12 +19,28 @@ try {
 } catch (error) { if (error.code !== 'ENOENT') console.warn('Could not read optional .env file:', error.message); }
 const PORT = Number(process.env.PORT || 3000);
 const ROOM_TTL_MS = 30 * 60 * 1000;
+const WAITING_ROOM_TIMEOUT_MS = Math.max(30_000, Number(process.env.ROOM_WAIT_TIMEOUT_MS || 120_000));
+const PROFILE_IP_RETENTION_DAYS = Math.max(1, Number(process.env.PROFILE_IP_RETENTION_DAYS || 30));
 const ROUND_MS = 90 * 1000;
 const TICK_MS = 33;
 const SNAPSHOT_MS = 50;
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
+
+const databaseUrl = process.env.DATABASE_URL || '';
+const databaseSslMode = (() => { try { return new URL(databaseUrl).searchParams.get('sslmode') || ''; } catch { return ''; } })();
+const databaseConnectionString = (() => { try { const parsed = new URL(databaseUrl); parsed.searchParams.delete('sslmode'); return parsed.toString(); } catch { return databaseUrl; } })();
+const dbPool = databaseUrl ? new Pool({
+  connectionString: databaseConnectionString,
+  // Use normal certificate validation when the provider's URL requires TLS (e.g. Neon).
+  // Render internal URLs have no sslmode query parameter and can use the private network without TLS.
+  ssl: ['require','verify-ca','verify-full'].includes(databaseSslMode) ? true : false,
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000
+}) : null;
+let dbReady = false;
 
 const W = 2200, H = 1600, RADIUS = 13;
 const pond = {x:1170,y:790,rx:152,ry:96};
@@ -44,9 +62,156 @@ const spawn = {
 function makeTrees(){let seed=731991;const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};const out=[];let attempts=0;while(out.length<142&&attempts<2200){attempts++;const x=38+rnd()*(W-76),y=38+rnd()*(H-76),r=13+rnd()*8;if(Math.hypot(x-spawn.runner.x,y-spawn.runner.y)<155||Math.hypot(x-spawn.catcher.x,y-spawn.catcher.y)<155)continue;if(walls.some(w=>x>w.x-35&&x<w.x+w.w+35&&y>w.y-35&&y<w.y+w.h+35))continue;const ex=(x-pond.x)/(pond.rx+30),ey=(y-pond.y)/(pond.ry+30);if(ex*ex+ey*ey<1.22)continue;if(out.some(t=>Math.hypot(x-t.x,y-t.y)<44))continue;out.push({x,y,r,variant:Math.floor(rnd()*4),shade:rnd()});}return out}
 const trees=makeTrees();
 
+async function initializeDatabase() {
+  if (!dbPool) {
+    console.warn('DATABASE_URL is not configured. Player memory/IP storage is disabled; active matches still work in memory.');
+    return;
+  }
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS chase_players (
+      player_id VARCHAR(64) PRIMARY KEY,
+      profile_token_hash CHAR(64) NOT NULL,
+      display_name VARCHAR(24) NOT NULL,
+      first_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_ip TEXT,
+      ip_last_seen TIMESTAMPTZ,
+      matches_played INTEGER NOT NULL DEFAULT 0,
+      wins INTEGER NOT NULL DEFAULT 0,
+      losses INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS chase_matches (
+      match_id UUID PRIMARY KEY,
+      runner_id VARCHAR(64) REFERENCES chase_players(player_id) ON DELETE SET NULL,
+      catcher_id VARCHAR(64) REFERENCES chase_players(player_id) ON DELETE SET NULL,
+      winner_role VARCHAR(12) NOT NULL CHECK (winner_role IN ('runner','catcher')),
+      round_number INTEGER NOT NULL,
+      completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await dbPool.query('CREATE INDEX IF NOT EXISTS chase_players_last_seen_idx ON chase_players(last_seen)');
+  await dbPool.query('CREATE INDEX IF NOT EXISTS chase_matches_completed_at_idx ON chase_matches(completed_at)');
+  dbReady = true;
+  await cleanExpiredIpData();
+  console.log('Persistent PostgreSQL player memory enabled. IP retention: ' + PROFILE_IP_RETENTION_DAYS + ' days after last seen.');
+}
+
+async function cleanExpiredIpData() {
+  if (!dbReady || !dbPool) return;
+  try {
+    await dbPool.query(
+      `UPDATE chase_players SET last_ip = NULL WHERE last_ip IS NOT NULL AND ip_last_seen < NOW() - ($1::text || ' days')::interval`,
+      [String(PROFILE_IP_RETENTION_DAYS)]
+    );
+  } catch (err) {
+    console.error('IP-retention cleanup failed:', err.message);
+  }
+}
+
+function profileIdValid(v) { return /^[a-f0-9]{32}$/i.test(String(v || '')); }
+function profileTokenValid(v) { return /^[a-f0-9]{64}$/i.test(String(v || '')); }
+function hashProfileToken(v) { return crypto.createHash('sha256').update(String(v)).digest('hex'); }
+function cleanDisplayName(v) {
+  const name = String(v || '').normalize('NFKC').replace(/[<>"'`\\]/g, '').replace(/[\r\n\t]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24);
+  return name || 'Forest Scout';
+}
+
+async function rememberPlayer(ws, profile) {
+  if (!profile || profile.consent !== true) throw new Error('Please accept the player-data notice before joining.');
+  const playerId = String(profile.playerId || '');
+  const profileToken = String(profile.profileToken || '');
+  if (!profileIdValid(playerId) || !profileTokenValid(profileToken)) throw new Error('Saved player profile is invalid. Use “Forget saved profile” and try again.');
+  const displayName = cleanDisplayName(profile.displayName);
+  const tokenHash = hashProfileToken(profileToken);
+  ws.playerId = playerId;
+  ws.displayName = displayName;
+  ws.profileStorage = dbReady;
+  ws.profileReturning = false;
+  if (!dbReady || !dbPool) return;
+
+  const ip = isIP(String(ws._ip || '')) ? String(ws._ip) : null;
+  const result = await dbPool.query(`
+    INSERT INTO chase_players (player_id, profile_token_hash, display_name, last_ip, ip_last_seen)
+    VALUES ($1, $2, $3, $4, CASE WHEN $4 IS NULL THEN NULL ELSE NOW() END)
+    ON CONFLICT (player_id) DO UPDATE SET
+      display_name = EXCLUDED.display_name,
+      last_seen = NOW(),
+      last_ip = EXCLUDED.last_ip,
+      ip_last_seen = CASE WHEN EXCLUDED.last_ip IS NULL THEN chase_players.ip_last_seen ELSE NOW() END
+    WHERE chase_players.profile_token_hash = EXCLUDED.profile_token_hash
+    RETURNING player_id, display_name, (xmax = 0) AS is_new
+  `, [playerId, tokenHash, displayName, ip]);
+  if (!result.rowCount) throw new Error('This saved profile could not be verified. Select “Forget saved profile” on this device and try again.');
+  ws.profileReturning = !result.rows[0].is_new;
+  ws.profileStorage = true;
+}
+
+async function forgetPlayer(profile) {
+  const playerId = String(profile?.playerId || '');
+  const profileToken = String(profile?.profileToken || '');
+  if (!profileIdValid(playerId) || !profileTokenValid(profileToken)) return {ok:false, persistent:dbReady, message:'Saved profile details are missing.'};
+  if (!dbReady || !dbPool) return {ok:true, deleted:false, persistent:false, message:'The backend database is not configured; only this device profile can be cleared.'};
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+    const ownership = await client.query('SELECT player_id FROM chase_players WHERE player_id = $1 AND profile_token_hash = $2 FOR UPDATE', [playerId, hashProfileToken(profileToken)]);
+    if (!ownership.rowCount) {
+      await client.query('ROLLBACK');
+      return {ok:true, deleted:false, persistent:true, message:'No matching saved profile was found.'};
+    }
+    const linked = await client.query('SELECT DISTINCT CASE WHEN runner_id = $1 THEN catcher_id ELSE runner_id END AS other_id FROM chase_matches WHERE runner_id = $1 OR catcher_id = $1', [playerId]);
+    await client.query('DELETE FROM chase_matches WHERE runner_id = $1 OR catcher_id = $1', [playerId]);
+    const deleted = await client.query('DELETE FROM chase_players WHERE player_id = $1 AND profile_token_hash = $2', [playerId, hashProfileToken(profileToken)]);
+    if (deleted.rowCount) {
+      for (const row of linked.rows) {
+        if (!row.other_id) continue;
+        await client.query(`
+          UPDATE chase_players p SET
+            matches_played = (SELECT COUNT(*)::int FROM chase_matches m WHERE m.runner_id = p.player_id OR m.catcher_id = p.player_id),
+            wins = (SELECT COUNT(*)::int FROM chase_matches m WHERE (m.runner_id = p.player_id AND m.winner_role = 'runner') OR (m.catcher_id = p.player_id AND m.winner_role = 'catcher')),
+            losses = (SELECT COUNT(*)::int FROM chase_matches m WHERE (m.runner_id = p.player_id AND m.winner_role = 'catcher') OR (m.catcher_id = p.player_id AND m.winner_role = 'runner'))
+          WHERE p.player_id = $1
+        `, [row.other_id]);
+      }
+    }
+    await client.query('COMMIT');
+    return {ok:true, deleted:deleted.rowCount > 0, persistent:true, message:deleted.rowCount ? 'Saved profile, IP record, and linked match records were deleted.' : 'No matching saved profile was found.'};
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function recordMatch(room, winner) {
+  if (!dbReady || !dbPool || !room.playerIds?.runner || !room.playerIds?.catcher) return;
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(`
+      INSERT INTO chase_matches (match_id, runner_id, catcher_id, winner_role, round_number)
+      VALUES ($1::uuid, $2, $3, $4, $5)
+      ON CONFLICT (match_id) DO NOTHING
+    `, [crypto.randomUUID(), room.playerIds.runner, room.playerIds.catcher, winner, Number(room.game.round || 1)]);
+    if (result.rowCount) {
+      await client.query(`UPDATE chase_players SET matches_played = matches_played + 1, wins = wins + $2, losses = losses + $3, last_seen = NOW() WHERE player_id = $1`, [room.playerIds.runner, winner === 'runner' ? 1 : 0, winner === 'runner' ? 0 : 1]);
+      await client.query(`UPDATE chase_players SET matches_played = matches_played + 1, wins = wins + $2, losses = losses + $3, last_seen = NOW() WHERE player_id = $1`, [room.playerIds.catcher, winner === 'catcher' ? 1 : 0, winner === 'catcher' ? 0 : 1]);
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Could not record match result:', err.message);
+  } finally {
+    client.release();
+  }
+}
+
 const app = express();
 app.disable('x-powered-by');
-app.get('/health', (_req, res) => res.json({ok:true, service:'CHASE.EXE multiplayer backend'}));
+app.get('/health', (_req, res) => res.json({ok:true, service:'CHASE.EXE multiplayer backend', storage:{enabled:dbReady, type:dbReady?'postgres':'ephemeral'}}));
 app.use(express.static(path.join(__dirname, 'public'), { extensions:['html'] }));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer:true, maxPayload:8192, perMessageDeflate:false });
@@ -73,6 +238,7 @@ function copyPlayer(p, online) {
 function publicRoom(room) {
   return {
     code: room.code,
+    waitTimeoutAt: room.waitingSince ? room.waitingSince + WAITING_ROOM_TIMEOUT_MS : 0,
     game: {...room.game},
     players: {
       runner: copyPlayer(room.players.runner, Boolean(room.members.runner)),
@@ -101,6 +267,8 @@ function newRoom(quickMatch = false) {
     quickMatch:Boolean(quickMatch),
     createdAt:Date.now(),
     lastSeen:Date.now(),
+    waitingSince:Date.now(),
+    playerIds:{runner:null,catcher:null},
     members:{runner:null,catcher:null},
     tokens:{runner:null,catcher:null},
     inputs:{runner:{x:0,y:0,sprint:false,at:0},catcher:{x:0,y:0,sprint:false,at:0}},
@@ -113,16 +281,18 @@ function snapshotTo(ws, room, role, sessionToken) {
   ws.role = role;
   ws.sessionToken = sessionToken;
   room.members[role] = ws;
+  room.playerIds[role] = ws.playerId || null;
   room.players[role].active = true;
   room.players[role].updatedAt = Date.now();
   room.inputs[role] = {x:0,y:0,sprint:false,at:Date.now()};
   touch(room);
-  send(ws, {type:'joined',ok:true,code:room.code,role,sessionToken,room:publicRoom(room)});
+  send(ws, {type:'joined',ok:true,code:room.code,role,sessionToken,room:publicRoom(room),profile:{displayName:ws.displayName||'Forest Scout',returning:Boolean(ws.profileReturning),persistent:Boolean(ws.profileStorage)}});
   publish(room);
 }
 function beginRound(room, increment=false) {
   if (!room.members.runner || !room.members.catcher) return;
   const now = Date.now();
+  room.waitingSince = 0;
   const round = increment ? Number(room.game.round || 1) + 1 : Number(room.game.round || 1);
   room.players.runner = copySpawn('runner');
   room.players.catcher = copySpawn('catcher');
@@ -138,6 +308,7 @@ function finishRound(room, winner, result) {
   room.game.winner = winner;
   room.game.result = result;
   room.game.endedAt = now;
+  room.waitingSince = 0;
   const elapsed = Math.max(0, Math.floor((now - (room.game.startAt || now)) / 1000));
   if (winner === 'runner') {
     room.players.runner.score = elapsed * 10 + 100;
@@ -151,6 +322,7 @@ function finishRound(room, winner, result) {
   room.inputs.runner = {x:0,y:0,sprint:false,at:now};
   room.inputs.catcher = {x:0,y:0,sprint:false,at:now};
   publish(room);
+  void recordMatch(room, winner);
 }
 function collides(x,y) {
   if (x < RADIUS+10 || x > W-RADIUS-10 || y < RADIUS+10 || y > H-RADIUS-10) return true;
@@ -204,18 +376,25 @@ function handleDetach(ws, intentional=false) {
       return;
     }
     room.tokens.catcher = null;
+    if (room.game.state === 'waiting') room.waitingSince = Date.now();
     if (room.game.state === 'ended') {
       room.game.state = 'waiting'; room.game.startAt = 0; room.game.finishAt = 0;
       room.game.winner = ''; room.game.endedAt = 0; room.game.result = 'Catcher left. Waiting for a new catcher.';
+      room.waitingSince = Date.now();
     }
   }
+  if (!intentional && role === 'catcher' && room.game.state === 'waiting' && room.members.runner) room.waitingSince = Date.now();
   if (!intentional && role === 'catcher' && room.quickMatch && room.game.state === 'ended') {
     room.tokens.catcher = null; room.game.state='waiting'; room.game.startAt=0; room.game.finishAt=0;
     room.game.winner=''; room.game.endedAt=0; room.game.result='Rival disconnected. Searching for another player.';
+    room.waitingSince = Date.now();
   }
   if (room.game.state === 'playing' || room.game.state === 'countdown') {
     room.game.state = 'waiting'; room.game.startAt=0; room.game.finishAt=0;
     room.game.winner=''; room.game.result='A player disconnected. Waiting for both players.';
+    room.waitingSince = Date.now();
+  } else if (room.game.state === 'waiting' && (room.members.runner || room.members.catcher) && !room.waitingSince) {
+    room.waitingSince = Date.now();
   }
   publish(room);
   if (intentional && role === 'catcher') publishNotice(room,'The catcher left. A new catcher can join with the same code.');
@@ -241,17 +420,31 @@ server.on('upgrade', (req, socket, head) => {
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n'); socket.destroy(); return;
   }
   wss.handleUpgrade(req, socket, head, ws => {
-    ws._ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+    const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map(v => v.trim()).filter(Boolean);
+    ws._ip = forwarded.length ? forwarded[forwarded.length - 1] : String(req.socket.remoteAddress || 'unknown');
     wss.emit('connection', ws, req);
   });
 });
 
 wss.on('connection', ws => {
-  ws.on('message', raw => {
+  ws.on('message', async raw => {
     if (raw.length > 8192) { errorTo(ws,'Message too large.'); return; }
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch { errorTo(ws,'Invalid message format.'); return; }
     const type = String(msg.type || '');
+    if (type === 'forgetProfile') {
+      try { send(ws, {type:'forgotten', ...await forgetPlayer(msg.profile || {})}); }
+      catch (err) { send(ws, {type:'forgotten',ok:false,persistent:dbReady,message:'Could not process the profile deletion request.'}); }
+      return;
+    }
+    if (['matchmake','create','join','reconnect'].includes(type)) {
+      try {
+        if (ws.profileReady) {
+          if (String(msg.profile?.playerId || '') !== ws.playerId || String(msg.profile?.profileToken || '') !== ws._profileToken) throw new Error('Player identity changed during this connection. Reconnect and try again.');
+        } else { await rememberPlayer(ws, msg.profile); ws._profileToken = String(msg.profile.profileToken); ws.profileReady = true; }
+      }
+      catch (err) { errorTo(ws, err.message || 'Could not verify your player profile.'); return; }
+    }
     if (type === 'heartbeat') { send(ws,{type:'heartbeat',serverTime:Date.now()}); return; }
     if (!ws.roomCode) {
       if (type === 'matchmake') {
@@ -334,6 +527,16 @@ setInterval(() => {
   const dt=Math.max(0,Math.min(0.05,(now-lastTick)/1000));
   lastTick=now;
   for (const [code,room] of rooms) {
+    if (room.game.state === 'waiting' && room.waitingSince && now - room.waitingSince >= WAITING_ROOM_TIMEOUT_MS && !(isOpen(room.members.runner) && isOpen(room.members.catcher))) {
+      const message = room.quickMatch ? 'No rival joined before the matchmaking timer expired. Please find a match again.' : 'Invite expired because nobody joined within the time limit. Create a new room or share a fresh invite.';
+      for (const role of ['runner','catcher']) {
+        const member = room.members[role];
+        send(member,{type:'roomClosed',message});
+        if (isOpen(member)) { try { member.close(4000,'Waiting room timed out'); } catch {} }
+      }
+      rooms.delete(code);
+      continue;
+    }
     if (now-room.lastSeen > ROOM_TTL_MS) {
       for (const role of ['runner','catcher']) send(room.members[role],{type:'roomClosed',message:'This room expired because it was inactive.'});
       rooms.delete(code); continue;
@@ -361,7 +564,18 @@ setInterval(() => {
   if (now-lastSnapshot >= SNAPSHOT_MS) lastSnapshot=now;
 }, TICK_MS);
 
-server.listen(PORT,'0.0.0.0',() => {
-  console.log(`CHASE.EXE backend listening on port ${PORT}`);
-  console.log(`Open http://localhost:${PORT} to play locally.`);
-});
+async function startServer() {
+  try {
+    await initializeDatabase();
+  } catch (err) {
+    console.error('Database initialization failed. Check DATABASE_URL and the PostgreSQL service:', err.message);
+    process.exit(1);
+  }
+  setInterval(cleanExpiredIpData, 6 * 60 * 60 * 1000).unref();
+  server.listen(PORT,'0.0.0.0',() => {
+    console.log(`CHASE.EXE backend listening on port ${PORT}`);
+    console.log(`Open http://localhost:${PORT} to play locally.`);
+    if (!dbReady) console.warn('WARNING: persistent player memory is disabled until DATABASE_URL is configured.');
+  });
+}
+void startServer();

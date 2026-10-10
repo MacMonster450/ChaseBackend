@@ -8,3 +8,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ROOM_WAIT_TIMEOUT_MS
+        value: "120000"
+      - key: PROFILE_IP_RETENTION_DAYS
+        value: "30"
