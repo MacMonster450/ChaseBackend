@@ -323,7 +323,7 @@ app.get('/api/admin/matches', requireAdmin, async (_req, res) => {
     return res.json({ok:true, matches:result.rows});
   } catch (err) { console.error('Admin matches query failed:', err.message); return res.status(500).json({ok:false,message:'Could not load match records.'}); }
 });
-app.get('/health', (_req, res) => res.json({ok:true, service:'CHASE.EXE multiplayer backend', storage:{enabled:dbReady, type:dbReady?'postgres':'ephemeral'}}));
+app.get('/health', (_req, res) => res.json({ok:true, service:'CHASE.EXE multiplayer backend', protocol:'chase-matchmaking-v1', matchmaking:true, storage:{enabled:dbReady, type:dbReady?'postgres':'ephemeral'}}));
 app.use(express.static(path.join(__dirname, 'public'), { extensions:['html'] }));
 const server = http.createServer(app);
 setInterval(() => {
@@ -334,6 +334,15 @@ setInterval(() => {
 const wss = new WebSocketServer({ noServer:true, maxPayload:8192, perMessageDeflate:false });
 const rooms = new Map();
 const createLimits = new Map();
+
+// Public, non-sensitive diagnostic: confirms the deployed server supports random matchmaking.
+app.get('/api/matchmaking/status', (_req, res) => {
+  const waitingRandomPlayers = Array.from(rooms.values()).filter(r =>
+    r.quickMatch && r.game.state === 'waiting' && isOpen(r.members.runner) && !isOpen(r.members.catcher)
+  ).length;
+  res.set('Cache-Control', 'no-store');
+  res.json({ok:true, protocol:'chase-matchmaking-v1', matchmaking:true, activeRooms:rooms.size, waitingRandomPlayers});
+});
 
 function send(ws, data) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
@@ -565,6 +574,7 @@ wss.on('connection', ws => {
     if (type === 'heartbeat') { send(ws,{type:'heartbeat',serverTime:Date.now()}); return; }
     if (!ws.roomCode) {
       if (type === 'matchmake') {
+        console.info('[matchmaking] request received');
         if (!rateAllowed(ws)) { errorTo(ws,'Too many matchmaking requests. Wait a minute and try again.'); return; }
         if (rooms.size >= 1000) { errorTo(ws,'The server is currently full. Try again later.'); return; }
         const waiting = Array.from(rooms.values()).filter(r => r.quickMatch && r.game.state === 'waiting' && isOpen(r.members.runner) && !isOpen(r.members.catcher) && Date.now()-r.lastSeen < ROOM_TTL_MS);
@@ -576,6 +586,7 @@ wss.on('connection', ws => {
           publishNotice(room,'Random rival found. The chase is starting.');
         } else {
           const room = newRoom(true); rooms.set(room.code,room);
+          console.info('[matchmaking] player queued; waiting for a rival');
           const sessionToken = token(); room.tokens.runner = sessionToken;
           snapshotTo(ws,room,'runner',sessionToken);
           send(ws,{type:'matchmaking',status:'queued',message:'Searching for another player…'});

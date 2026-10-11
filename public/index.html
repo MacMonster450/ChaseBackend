@@ -643,7 +643,7 @@ function resizeGameCanvas(){
 
 const PROFILE_ID_KEY='chasePlayerId_v1',PROFILE_TOKEN_KEY='chaseProfileToken_v1',PROFILE_NAME_KEY='chasePlayerName_v1',PROFILE_CONSENT_KEY='chasePrivacyConsent_v1';
 const BACKEND_WS_URL='wss://chasebackend-9loz.onrender.com/ws';
-let backendUrl=BACKEND_WS_URL,socket=null,heartbeatTimer=0,reconnectTimer=0,inputTimer=0,room=null,code='',role='',sessionToken='',connected=false,leaving=false,starting=false,roundEnding=false,lastFrame=0,lastStatePhase='',lastSend=0,serverOffset=0,quickMatchMode=false;
+let backendUrl=BACKEND_WS_URL,socket=null,heartbeatTimer=0,reconnectTimer=0,inputTimer=0,connectWatchdog=0,room=null,code='',role='',sessionToken='',connected=false,leaving=false,starting=false,roundEnding=false,lastFrame=0,lastStatePhase='',lastSend=0,serverOffset=0,quickMatchMode=false;
 let soundOn=true,audioCtx=null,inputs=new Set(),player={x:150,y:170,dx:1,dy:0,stamina:100,score:0},stamina=100,best=0,score=0,toastTimer=0,finishKey='',reconnectDelay=1000,camera={x:0,y:0};
 const pond={x:1170,y:790,rx:152,ry:96};
 const walls=[
@@ -690,9 +690,21 @@ function startAudio(){if(!soundOn)return;try{if(!audioCtx)audioCtx=new(window.Au
 function beep(freq=440,duration=.1,type='sine',gain=.025){if(!soundOn)return;startAudio();if(!audioCtx)return;try{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=gain;g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+duration);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+duration)}catch(e){}}
 function failConnection(msg){netStatus(false,'SERVER UNAVAILABLE');setMsg('lobbyStatus',msg,'error')}
 function connect(action, isReconnect=false){
+  clearTimeout(connectWatchdog);
   if(socket){try{socket.onclose=null;socket.close()}catch(e){}}
-  const ws=new WebSocket(backendUrl);socket=ws;
+  let ws;
+  try { ws=new WebSocket(backendUrl); } catch(e) { failConnection('Could not open the multiplayer connection. Check the backend WebSocket URL.'); resetLobbyButtons(); return; }
+  socket=ws;
   netStatus(false,'CONNECTING');
+  // A healthy backend answers with joined, error, or matchmaking. If none arrives,
+  // surface a useful deployment hint instead of leaving the player on an infinite spinner.
+  connectWatchdog=setTimeout(()=>{
+    if(socket===ws&&!code&&ws.readyState===WebSocket.OPEN){
+      failConnection('The server connected but did not answer the matchmaking request. Deploy the latest CHASE.EXE server.js to chasebackend-9loz.onrender.com and check /api/matchmaking/status.');
+      resetLobbyButtons();
+      try{ws.close()}catch(e){}
+    }
+  },20000);
   ws.onopen=()=>{
     if(socket!==ws)return;
     netStatus(true,'AUTHENTICATING');
@@ -701,26 +713,39 @@ function connect(action, isReconnect=false){
     clearInterval(inputTimer);inputTimer=setInterval(sendInput,45);
   };
   ws.onmessage=event=>{if(socket!==ws)return;let data;try{data=JSON.parse(event.data)}catch(e){return}handleMessage(data,isReconnect)};
-  ws.onerror=()=>{if(socket===ws&&!code)failConnection('The game server could not be reached. Check your internet connection and try again.')};
+  ws.onerror=()=>{if(socket===ws&&!code){clearTimeout(connectWatchdog);failConnection('Could not connect to the multiplayer WebSocket. Check that the Render service is awake and its /ws route is deployed.');resetLobbyButtons()}};
   ws.onclose=()=>{
     if(socket!==ws)return;
-    clearInterval(heartbeatTimer);clearInterval(inputTimer);
-    netStatus(false,'DISCONNECTED');
+    clearTimeout(connectWatchdog);clearInterval(heartbeatTimer);clearInterval(inputTimer);
+    if(!code){resetLobbyButtons();if(!leaving)netStatus(false,'DISCONNECTED');}
+    else netStatus(false,'DISCONNECTED');
     if(!leaving&&code&&sessionToken){
       $('connectionHint').textContent='Connection lost — reconnecting…';
       clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(!leaving&&code&&sessionToken){connect({type:'reconnect',code,sessionToken},true);reconnectDelay=Math.min(10000,Math.round(reconnectDelay*1.6))}},reconnectDelay);
     }
   };
 }
+function resetLobbyButtons(){ $('quickMatchBtn').disabled=false; $('createBtn').disabled=false; $('joinBtn').disabled=false; }
 function handleMessage(data,isReconnect){
   if(data.type==='heartbeat'){serverOffset=Number(data.serverTime||Date.now())-Date.now();return}
+  if(data.type==='matchmaking'){
+    if(data.status==='queued'){
+      clearTimeout(connectWatchdog);
+      setMsg('lobbyStatus','Connected to matchmaking. Waiting for another player to press Find Match…');
+      netStatus(true,'SEARCHING');
+      if(code)$('connectionHint').textContent='Matchmaking is active • waiting for another player';
+    }
+    return;
+  }
   if(data.type==='error'){
+    clearTimeout(connectWatchdog);
     if(!code){setMsg('lobbyStatus',data.message||'Connection error.','error');$('quickMatchBtn').disabled=false;$('createBtn').disabled=false;$('joinBtn').disabled=false;}
     else showToast(data.message||'Server error');
     if(!code&&socket){try{socket.close()}catch(e){}}
     return;
   }
   if(data.type==='joined'&&data.ok){
+    clearTimeout(connectWatchdog);
     code=data.code;role=data.role;sessionToken=data.sessionToken;room=data.room;leaving=false;reconnectDelay=1000;serverOffset=Number(room.serverTime||Date.now())-Date.now();
     try{sessionStorage.setItem('chaseSession',JSON.stringify({code,role,sessionToken,quickMatchMode}))}catch(e){}
     enterRoom();netStatus(true,'CONNECTED');if(data.profile&&data.profile.persistent){if(data.profile.returning)showToast('Welcome back, '+data.profile.displayName+'. Your player profile was remembered.');else showToast('Player profile saved for future visits.')}else showToast('Match connected, but server memory is disabled until PostgreSQL is configured.');updateFromRoom(room);
@@ -728,10 +753,10 @@ function handleMessage(data,isReconnect){
   }
   if(data.type==='state'&&data.room){room=data.room;serverOffset=Number(room.serverTime||Date.now())-Date.now();if(gameView.classList.contains('hidden')&&code)enterRoom();updateFromRoom(room);return}
   if(data.type==='notice'){showToast(data.message||'Room update');return}
-  if(data.type==='roomClosed'){const m=data.message||'Room closed';leaveRoom(true,m);showToast(m)}
+  if(data.type==='roomClosed'){clearTimeout(connectWatchdog);const m=data.message||'Room closed';leaveRoom(true,m);showToast(m)}
 }
 function createRoom(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=false;const b=$('createBtn');b.disabled=true;setMsg('lobbyStatus','Connecting and creating a private room…');connect({type:'create'});setTimeout(()=>{b.disabled=false},1800)}
-function quickMatch(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=true;const b=$('quickMatchBtn');b.disabled=true;setMsg('lobbyStatus','Finding a random player… keep this page open.');netStatus(false,'SEARCHING');connect({type:'matchmake'});setTimeout(()=>{if(!code){b.disabled=false;if(!socket||socket.readyState!==WebSocket.OPEN)quickMatchMode=false}},9000)}
+function quickMatch(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=true;const b=$('quickMatchBtn');b.disabled=true;setMsg('lobbyStatus','Connecting to matchmaking… another player must also press Find Match.');netStatus(false,'SEARCHING');connect({type:'matchmake'});setTimeout(()=>{if(!code&&(!socket||socket.readyState!==WebSocket.OPEN)){b.disabled=false;quickMatchMode=false}},9000)}
 function joinRoom(){if(code){showToast('Leave the current room first.');return}if(!requireProfileConsent())return;quickMatchMode=false;const c=$('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);$('joinCode').value=c;if(c.length!==8){setMsg('lobbyStatus','Enter the full 8-character join code.','error');return}const b=$('joinBtn');b.disabled=true;setMsg('lobbyStatus','Connecting to room '+c+'…');connect({type:'join',code:c});setTimeout(()=>{b.disabled=false},1200)}
 function enterRoom(){starting=false;leaving=false;roundEnding=false;stamina=100;inputs.clear();player=Object.assign({},(room&&room.players&&room.players[role])||spawn[role]||spawn.runner);best=Number(localStorage.getItem('chaseBest_'+role)||0);score=0;camera.x=clamp(player.x-W/2,0,WORLD_W-W);camera.y=clamp(player.y-H/2,0,WORLD_H-H);gameView.classList.remove('hidden');lobbyView.classList.add('hidden');document.body.classList.add('in-game');resizeGameCanvas();window.requestAnimationFrame(resizeGameCanvas);$('roomLabel').textContent=code;$('bigCode').textContent=code;$('roleTitle').textContent=role==='runner'?'RUNNER':'HUNTER';$('runnerBadge').textContent=role==='runner'?'● RUNNER — YOU / MOSS':'● RUNNER — RIVAL / MOSS';$('catcherBadge').textContent=role==='catcher'?'● HUNTER — YOU / RUST':'● HUNTER — RIVAL / RUST';$('gameSubtitle').textContent=role==='runner'?'You are the runner. Stay hidden in the woodland until extraction.':'You are the hunter. Track down the runner before extraction.';$('bestText').textContent=best;$('restartBtn').classList.toggle('hidden',role!=='runner');$('connectionHint').textContent='Connecting to rival…';render();lastStatePhase='';finishKey='';updateFromRoom(room);}
 function updateRoundButton(g,online){const b=$('restartBtn');if(role!=='runner'){b.classList.add('hidden');return;}b.classList.remove('hidden');if(g.state==='countdown'||g.state==='playing'){b.disabled=true;b.textContent='ROUND IN PROGRESS';}else if(!online.runner||!online.catcher){b.disabled=false;b.textContent=quickMatchMode?'CANCEL SEARCH':'INVITE PLAYER';}else if(g.state==='ended'){b.disabled=false;b.textContent='NEW ROUND';}else{b.disabled=true;b.textContent='WAITING…';}}
@@ -761,7 +786,7 @@ function resetJoystick(){joystickVector={x:0,y:0};const knob=$('joystickKnob');i
 function setupJoystick(){const area=$('joystickArea'),knob=$('joystickKnob');if(!area||!knob)return;let pointerId=null;const move=e=>{const rect=area.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const limit=Math.min(rect.width,rect.height)*.34;const d=Math.hypot(dx,dy);if(d>limit){dx=dx/d*limit;dy=dy/d*limit}let x=dx/limit,y=dy/limit;if(Math.hypot(x,y)<.12){x=0;y=0}joystickVector={x,y};knob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;};area.addEventListener('pointerdown',e=>{e.preventDefault();pointerId=e.pointerId;try{area.setPointerCapture(pointerId)}catch{}startAudio();move(e)});area.addEventListener('pointermove',e=>{if(pointerId===e.pointerId){e.preventDefault();move(e)}});const end=e=>{if(pointerId===null||e.pointerId!==pointerId)return;pointerId=null;resetJoystick()};['pointerup','pointercancel','lostpointercapture'].forEach(ev=>area.addEventListener(ev,end));window.addEventListener('blur',resetJoystick);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetJoystick()});}
 
 function restartRound(){if(!socket||socket.readyState!==WebSocket.OPEN){showToast('Wait for the connection to return.');return;}if(role!=='runner'||!room||!room.game){showToast('Room status is not ready yet.');return;}const g=room.game,online=room.online||{};if(quickMatchMode&&g.state==='waiting'&&(!online.runner||!online.catcher)){leaveRoom(false);return;}if(!online.runner||!online.catcher){showOverlay('WAITING FOR BOTH PLAYERS','Waiting for your friend','No new round has started. Share the room invite so your friend can join or reconnect. The game will start when both players are connected.',code,'COPY INVITE LINK');$('overlayFoot').textContent='Your friend can rejoin using the same room code.';return;}if(g.state!=='ended'){if(g.state==='waiting'){showOverlay('ROOM READY','Waiting for the round to start','The server has not started a new round yet. Please wait a moment.',code,'COPY INVITE LINK');}else{showToast('A round is already in progress.');}return;}socket.send(JSON.stringify({type:'restart'}));$('restartBtn').disabled=true;$('restartBtn').textContent='STARTING…';}
-function leaveRoom(fromServer=false,notice=''){ leaving=true;quickMatchMode=false;clearTimeout(reconnectTimer);clearInterval(heartbeatTimer);clearInterval(inputTimer);inputs.clear();resetJoystick();try{sessionStorage.removeItem('chaseSession')}catch(e){}if(socket){const old=socket;if(!fromServer&&old.readyState===WebSocket.OPEN)try{old.send(JSON.stringify({type:'leave'}))}catch(e){}socket=null;try{old.onclose=null;old.close()}catch(e){}}code='';role='';sessionToken='';room=null;connected=false;lastStatePhase='';finishKey='';netStatus(false,'NOT CONNECTED');gameView.classList.add('hidden');lobbyView.classList.remove('hidden');document.body.classList.remove('in-game');$('quickMatchBtn').disabled=false;$('createBtn').disabled=false;$('joinBtn').disabled=false;setMsg('lobbyStatus',notice||'You left the room. Find a random player or create a private room.');}
+function leaveRoom(fromServer=false,notice=''){ leaving=true;quickMatchMode=false;clearTimeout(connectWatchdog);clearTimeout(reconnectTimer);clearInterval(heartbeatTimer);clearInterval(inputTimer);inputs.clear();resetJoystick();try{sessionStorage.removeItem('chaseSession')}catch(e){}if(socket){const old=socket;if(!fromServer&&old.readyState===WebSocket.OPEN)try{old.send(JSON.stringify({type:'leave'}))}catch(e){}socket=null;try{old.onclose=null;old.close()}catch(e){}}code='';role='';sessionToken='';room=null;connected=false;lastStatePhase='';finishKey='';netStatus(false,'NOT CONNECTED');gameView.classList.add('hidden');lobbyView.classList.remove('hidden');document.body.classList.remove('in-game');$('quickMatchBtn').disabled=false;$('createBtn').disabled=false;$('joinBtn').disabled=false;setMsg('lobbyStatus',notice||'You left the room. Find a random player or create a private room.');}
 function currentPlayer(k){const v=room&&room.players&&room.players[k];if(!v)return spawn[k];return{x:Number(v.x)||0,y:Number(v.y)||0,dx:Number(v.dx)||0,dy:Number(v.dy)||0,stamina:Number(v.stamina??100),score:Number(v.score||0),updatedAt:Number(v.updatedAt)||0,active:v.active!==false}}
 function getKeyDir(){let x=0,y=0;if(inputs.has('ArrowLeft')||inputs.has('KeyA'))x--;if(inputs.has('ArrowRight')||inputs.has('KeyD'))x++;if(inputs.has('ArrowUp')||inputs.has('KeyW'))y--;if(inputs.has('ArrowDown')||inputs.has('KeyS'))y++;return{x,y}}
 function roundedRect(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h)}

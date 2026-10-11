@@ -1,6 +1,6 @@
 # CHASE.EXE — Backend + ESP32 setup
 
-This package contains the single-file HTML game frontend and a small Node.js WebSocket backend. The backend supports random-player matchmaking plus private 8-character invite rooms. It assigns per-player session tokens, validates inputs, simulates movement on the server, decides whether the runner escaped or was tagged, expires waiting invite panels after 120 seconds, and can remember player profiles and match records in PostgreSQL. The visual map is a camera-follow woodland research site. The mobile frontend now uses a full-viewport landscape play layout, thumb-zone joystick on the lower-left and sprint button on the lower-right, a rotate-phone screen for portrait gameplay on touch devices, adaptive canvas sizing, and a native high-contrast consent checkbox in the player profile popup. Tap **TRY LANDSCAPE MODE** or rotate the phone manually; orientation locking depends on browser and device support.
+This package contains the single-file HTML game frontend and a small Node.js WebSocket backend. The frontend now shows a clear diagnostic if the WebSocket connects but does not answer the matchmaking action. The backend exposes `/api/matchmaking/status` (no room codes or private data) so deployment can be checked. The backend supports random-player matchmaking plus private 8-character invite rooms. It assigns per-player session tokens, validates inputs, simulates movement on the server, decides whether the runner escaped or was tagged, expires waiting invite panels after 120 seconds, and can remember player profiles and match records in PostgreSQL. The visual map is a camera-follow woodland research site. The mobile frontend now uses a full-viewport landscape play layout, thumb-zone joystick on the lower-left and sprint button on the lower-right, a rotate-phone screen for portrait gameplay on touch devices, adaptive canvas sizing, and a native high-contrast consent checkbox in the player profile popup. Tap **TRY LANDSCAPE MODE** or rotate the phone manually; orientation locking depends on browser and device support.
 
 ## Credentials and authentication
 
@@ -64,6 +64,18 @@ In Render → the `chasebackend-9loz` Web Service → **Environment**, set these
 Enter the password directly in the Render dashboard; do not paste it into `server.js`, the HTML, `.env.example`, or GitHub. The username is not a password and may be stored as configuration, but the password must remain private. Saving environment changes triggers a restart/redeploy. The login endpoint has rate limiting, compares secrets using constant-time comparison, and sets an HttpOnly, Secure-in-production, SameSite=Strict session cookie. Admin sessions last up to eight hours or until logout/redeploy.
 
 If the password has been shared publicly or you suspect it may have been exposed, change it in Render before continuing.
+
+
+### Diagnose “Find Match”
+
+After deploying **both** `server.js` and `public/index.html`, open these URLs:
+
+- Health and protocol: `https://chasebackend-9loz.onrender.com/health` — it should include `"protocol":"chase-matchmaking-v1"` and `"matchmaking":true`.
+- Matchmaking status: `https://chasebackend-9loz.onrender.com/api/matchmaking/status` — it should return JSON with `"ok":true`. It does not reveal room codes.
+
+In Render Logs, pressing Find Match should create a log line `player queued; waiting for a rival`; when another player presses Find Match, it should log `pairing a waiting player`. If the first player stays queued, a second real browser/device must press Find Match while the first is still waiting; this feature does not create bot opponents.
+
+The game HTML’s backend URL is `wss://chasebackend-9loz.onrender.com/ws`. If you host the HTML on a different site (such as `relayhub.onrender.com`), that is fine as long as the backend server deployed at `chasebackend-9loz.onrender.com` is this CHASE.EXE `server.js`. Deploying only the HTML or deploying this server to a different Render service will not update the endpoint the game actually contacts.
 
 ## Option A — Run locally first
 
