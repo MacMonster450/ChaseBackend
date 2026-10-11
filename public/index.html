@@ -436,6 +436,67 @@ body:not(.in-game) .page::-webkit-scrollbar{display:none!important;width:0!impor
 }
 </style>
 
+<style id="dedicated-play-area-fix">
+/* Active matches live on their own viewport. Lobby, guide, header and footer are removed from play mode. */
+html, body { min-height:100%; }
+body.in-game { position:fixed!important; inset:0!important; width:100vw!important; height:100dvh!important; min-height:0!important; max-height:100dvh!important; overflow:hidden!important; }
+body.in-game .topbar, body.in-game .footer { display:none!important; }
+body.in-game .page {
+  position:fixed!important; inset:0!important; z-index:2!important; width:100vw!important; max-width:none!important;
+  height:100dvh!important; min-height:0!important; max-height:100dvh!important; margin:0!important;
+  padding:max(5px,env(safe-area-inset-top)) max(7px,env(safe-area-inset-right)) max(5px,env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left))!important;
+  display:flex!important; flex-direction:column!important; align-items:stretch!important; justify-content:stretch!important;
+  gap:0!important; overflow:hidden!important;
+}
+body.in-game #lobbyView { display:none!important; }
+body.in-game #gameView.hidden { display:none!important; }
+body.in-game #gameView:not(.hidden) {
+  display:flex!important; position:relative!important; flex:1 1 auto!important; flex-direction:column!important;
+  justify-content:stretch!important; align-items:stretch!important; gap:8px!important; width:100%!important;
+  max-width:none!important; height:100%!important; max-height:100%!important; min-height:0!important;
+  margin:0!important; padding:0!important; overflow:hidden!important;
+}
+body.in-game #gameView > .hero {
+  display:flex!important; flex:0 0 auto!important; width:100%!important; min-height:42px!important; height:auto!important;
+  max-height:none!important; margin:0!important; padding:0!important; gap:8px!important; align-items:center!important;
+  justify-content:stretch!important; overflow:visible!important;
+}
+body.in-game #gameView > .hero > div:first-child { display:none!important; }
+body.in-game #gameView .gameActions {
+  display:flex!important; flex:1 1 auto!important; width:100%!important; max-width:none!important; min-width:0!important;
+  justify-content:space-between!important; gap:8px!important; margin:0!important;
+}
+body.in-game #gameView .gameActions button { flex:1 1 0!important; min-width:0!important; min-height:40px!important; padding:7px 10px!important; font-size:clamp(.68rem,1.2vw,.84rem)!important; }
+body.in-game #gameView .gameShell {
+  display:flex!important; flex:1 1 auto!important; flex-direction:column!important; width:100%!important; max-width:none!important;
+  height:auto!important; max-height:none!important; min-width:0!important; min-height:0!important; margin:0!important;
+  border-radius:12px!important; overflow:hidden!important;
+}
+body.in-game #gameView .gameHead { flex:0 0 auto!important; min-height:42px!important; padding:6px 10px!important; }
+body.in-game #gameView .canvasWrap {
+  display:block!important; position:relative!important; flex:1 1 auto!important; width:100%!important; height:auto!important;
+  min-height:0!important; max-height:none!important; aspect-ratio:auto!important; overflow:hidden!important;
+}
+body.in-game #gameView .canvasWrap canvas {
+  display:block!important; width:100%!important; height:100%!important; max-height:none!important; aspect-ratio:auto!important;
+  object-fit:fill!important; touch-action:none!important;
+}
+body.in-game #gameView .gameFoot { flex:0 0 auto!important; min-height:34px!important; padding:4px 9px!important; }
+body.in-game #gameView .touchControls { z-index:500!important; }
+@media (orientation:landscape) and (max-height:640px) {
+  body.in-game .page { padding:3px max(5px,env(safe-area-inset-right)) 3px max(5px,env(safe-area-inset-left))!important; }
+  body.in-game #gameView:not(.hidden) { gap:4px!important; }
+  body.in-game #gameView > .hero { min-height:32px!important; }
+  body.in-game #gameView .gameActions { gap:5px!important; }
+  body.in-game #gameView .gameActions button { min-height:30px!important; padding:3px 6px!important; font-size:clamp(10px,1.65vw,14px)!important; }
+  body.in-game #gameView .gameHead { min-height:32px!important; padding:3px 7px!important; }
+  body.in-game #gameView .gameFoot { min-height:26px!important; padding:2px 7px!important; }
+}
+@media (max-width:900px) and (orientation:portrait) and (pointer:coarse) {
+  body.in-game #gameView { visibility:hidden!important; }
+}
+</style>
+
 </head>
 <body>
 <header class="topbar"><div class="brand"><div class="brandIcon">⌁</div><div><div class="brandName">CHASE.EXE</div><div class="subbrand">WOODLAND PURSUIT / ONLINE MULTIPLAYER</div></div></div><div class="onlinepill"><i id="netDot" class="dot"></i><span id="netText">NOT CONNECTED</span></div></header>
@@ -521,6 +582,7 @@ body:not(.in-game) .page::-webkit-scrollbar{display:none!important;width:0!impor
       <div class="instructionCallout"><strong>Tip:</strong> Sprint only when you need to escape or close the gap. Your camera follows your character, so use the minimap to keep track of the arena.</div>
     </div>
   </details>
+</section>
 <section id="gameView" class="hidden">
   <div class="hero"><div><div class="eyebrow">BLACKPINE GROUNDS / <span id="roomLabel">—</span></div><h1 style="font-size:clamp(1.5rem,4vw,2.4rem)">WOODLAND <span id="roleTitle">PURSUIT</span></h1><p id="gameSubtitle">Move quietly, use the terrain, and keep your rival in sight.</p></div><div class="actionrow gameActions" style="max-width:390px"><button id="shareBtn" class="primary">COPY INVITE</button><button id="fullscreenBtn" class="quiet">⛶ FULLSCREEN</button><button id="leaveBtn" class="quiet">LEAVE</button></div></div>
   <div class="gameShell" id="gameShell"><div class="gameHead"><div class="playerlabels"><span id="runnerBadge" class="rolepill runner">● RUNNER — CYAN</span><span id="catcherBadge" class="rolepill catcher">● CATCHER — PINK</span></div><div class="metrics"><div class="metric"><small>Time left</small><strong id="timerText">90</strong></div><div class="metric"><small>Your score</small><strong id="scoreText">0</strong></div><div class="metric"><small>Best</small><strong id="bestText">0</strong></div></div></div>

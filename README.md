@@ -160,3 +160,17 @@ The public Render copy now includes a descriptive page title and meta descriptio
 ## Lobby display fix
 
 The latest `public/index.html` keeps **Find Match**, **Create Private Room**, and **Join Room with an 8-character code** visible at desktop and mobile widths. The Quick Start instructions are collapsible to preserve space for the matchmaking controls. The lobby hides its scrollbar but can still scroll on short screens; active gameplay remains a fixed no-scroll view.
+
+## Dedicated play screen update
+
+The latest `public/index.html` separates the lobby and active match into sibling sections. When a match connects, the lobby and guide are hidden and the play area expands to the full viewport. The Leave button returns to the lobby. No server protocol or environment-variable changes are required for this UI fix.
+
+To deploy this screen update, replace `public/index.html` in your existing repository, then run:
+
+```cmd
+git add public/index.html
+git commit -m "Give CHASE.EXE a dedicated play screen"
+git push origin main
+```
+
+For an ESP32-hosted copy, use the same HTML as `data/chase.html` (or `data/index.html` only if you want it to be the homepage) and upload the LittleFS filesystem.
