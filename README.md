@@ -155,3 +155,8 @@ The public Render copy now includes a descriptive page title and meta descriptio
 4. Choose the HTML-tag ownership verification method. Copy the exact `google-site-verification` meta tag Google gives you into the `<head>` of `public/index.html`, commit and push it, wait for Render to redeploy, then complete verification. Do not invent or reuse someone else's verification token.
 5. In Search Console, open URL Inspection for `https://chasebackend-9loz.onrender.com/` and choose Request Indexing. Then submit `https://chasebackend-9loz.onrender.com/sitemap.xml` under Sitemaps.
 6. Keep useful laptop/mobile instructions visible on the landing page and share the public game page from relevant project pages and communities. Search indexing and rank are not guaranteed, and no one can guarantee a #1 position.
+
+
+## Lobby display fix
+
+The latest `public/index.html` keeps **Find Match**, **Create Private Room**, and **Join Room with an 8-character code** visible at desktop and mobile widths. The Quick Start instructions are collapsible to preserve space for the matchmaking controls. The lobby hides its scrollbar but can still scroll on short screens; active gameplay remains a fixed no-scroll view.

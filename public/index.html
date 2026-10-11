@@ -344,6 +344,98 @@ body.in-game .page{height:100dvh;max-height:100dvh;padding:max(5px,env(safe-area
 @media(hover:hover) and (pointer:fine){.mobileControlTip{display:none!important}}
 </style>
 
+
+<style>
+/* Lobby layout fix: always show private-room actions; instructions collapse by default. */
+body:not(.in-game) .page{
+  height:calc(100dvh - 62px)!important; min-height:0!important;
+  flex:1 1 auto!important; justify-content:flex-start!important;
+  overflow-x:hidden!important; overflow-y:auto!important;
+  display:block!important; scrollbar-width:none!important;
+}
+body:not(.in-game) .page::-webkit-scrollbar{display:none!important;width:0!important}
+#lobbyView{width:100%!important;max-height:none!important;min-height:0!important;
+  display:flex!important;flex-direction:column!important;justify-content:flex-start!important;gap:12px!important;overflow:visible!important}
+#lobbyView .hero{flex:0 0 auto!important}
+#lobbyView .layout{flex:0 0 auto!important;min-height:max-content!important;align-items:stretch!important}
+#lobbyView .lobbyPanel{height:auto!important;min-height:0!important;overflow:visible!important;align-self:stretch!important}
+#lobbyView .createCard,#lobbyView .privateRoomRow,#lobbyView .divider,#lobbyView .joinField,#lobbyView .profileShortcut,#lobbyView #lobbyStatus{flex-shrink:0!important}
+#lobbyView .controlsGuide{display:block!important;flex:0 0 auto!important;max-height:none!important;overflow:visible!important;margin-top:0!important}
+.controlsGuide{padding:14px 18px!important}
+.controlsGuideSummary{display:block;cursor:pointer;list-style:none;outline-offset:4px}
+.controlsGuideSummary::-webkit-details-marker{display:none}
+.controlsGuideSummary::marker{content:""}
+.controlsGuideSummaryRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:5px 0 6px}
+.controlsGuideSummaryRow strong{font-size:clamp(1rem,2.5vw,1.35rem);letter-spacing:-.025em}
+.controlsGuideToggle{flex:0 0 auto;border:1px solid #506348;border-radius:9px;padding:7px 10px;color:#c6d8b8;font-size:.63rem;font-weight:900;letter-spacing:.08em;white-space:nowrap}
+.controlsGuideIntro{display:block;max-width:760px;color:#aab7a0;line-height:1.45;font-size:.79rem;margin:0}
+.controlsGuide[open] .controlsGuideToggle{color:#172116;background:#b7d0a4;border-color:#b7d0a4}
+.controlsGuide[open] .controlsGuideToggle{font-size:0}
+.controlsGuide[open] .controlsGuideToggle::after{content:"HIDE CONTROLS −";font-size:.63rem}
+.howToPlayContent{padding-top:12px}
+.howToPlayContent>.controlsGuideIntro{margin-bottom:12px}
+@media(max-width:850px){
+  body:not(.in-game) .topbar{flex-basis:54px!important}
+  body:not(.in-game) .page{height:calc(100dvh - 54px)!important;padding:6px 12px 12px!important}
+  #lobbyView .layout{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+  #lobbyView .guidePanel{display:none!important}
+  #lobbyView .lobbyPanel{width:100%!important;max-width:none!important;padding:14px!important}
+}
+@media(max-width:560px){
+  body:not(.in-game) .page{height:calc(100dvh - 54px)!important;padding:5px 9px 10px!important}
+  #lobbyView{gap:8px!important}
+  #lobbyView .hero{display:block!important;margin:0 0 2px!important}
+  #lobbyView .hero h1{font-size:clamp(1.35rem,6.5vw,1.8rem)!important;margin:3px 0 4px!important}
+  #lobbyView .hero p{display:none!important}
+  #lobbyView .heroStats{display:none!important}
+  #lobbyView .lobbyPanel{padding:11px!important}
+  #lobbyView .panelTopline{margin-bottom:8px}
+  #lobbyView .createCard{grid-template-columns:32px minmax(0,1fr)!important;padding:9px!important;gap:8px!important}
+  #lobbyView .createIcon{width:32px;height:32px}
+  #lobbyView .createCopy p{font-size:.68rem!important;line-height:1.35!important}
+  #lobbyView .createButton{grid-column:1/-1!important;min-height:40px!important}
+  #lobbyView .privateRoomRow{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-top:5px!important;padding:5px 2px!important;font-size:.68rem!important}
+  #lobbyView .privateRoomRow button{display:inline-flex!important;width:auto!important;min-height:35px!important;padding:7px 9px!important;font-size:.63rem!important;white-space:nowrap}
+  #lobbyView .divider{display:flex!important;margin:8px 0!important;font-size:.6rem!important}
+  #lobbyView .joinField{display:flex!important;margin:4px 0!important;gap:5px!important}
+  #lobbyView .joinField label{display:block!important;font-size:.66rem!important}
+  #lobbyView .joinline{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:6px!important}
+  #lobbyView .joinline input{display:block!important;min-width:0!important;min-height:39px!important;padding:7px 9px!important;font-size:.76rem!important}
+  #lobbyView .joinButton{display:inline-flex!important;min-height:39px!important;padding:6px 9px!important;font-size:.62rem!important;white-space:nowrap}
+  #lobbyView .fieldHint{display:none!important}
+  #lobbyView .profileShortcut{display:flex!important;margin:5px 0 3px!important;padding:7px 8px!important}
+  #lobbyView .statusmsg{display:flex!important;min-height:32px!important;margin-top:4px!important;padding:6px 8px!important;font-size:.66rem!important}
+  #lobbyView .trustRow{display:none!important}
+  .controlsGuide{padding:10px 12px!important}
+  .controlsGuideSummaryRow strong{font-size:1rem}
+  .controlsGuideToggle{padding:6px 8px;font-size:.57rem}
+  .controlsGuideIntro{font-size:.71rem}
+}
+@media(max-height:560px) and (orientation:landscape){
+  body:not(.in-game) .topbar{flex-basis:42px!important;padding:3px 10px!important}
+  body:not(.in-game) .page{height:calc(100dvh - 42px)!important;padding:3px 8px 7px!important}
+  #lobbyView{gap:6px!important}
+  #lobbyView .hero{display:none!important}
+  #lobbyView .layout{gap:6px!important}
+  #lobbyView .lobbyPanel{padding:8px!important}
+  #lobbyView .panelTopline{margin-bottom:4px}
+  #lobbyView .panelTopline h2{font-size:.9rem;margin:2px 0}
+  #lobbyView .createCard{padding:6px!important;gap:6px!important}
+  #lobbyView .createIcon{width:27px;height:27px}
+  #lobbyView .createButton{min-height:32px!important;padding:5px!important}
+  #lobbyView .privateRoomRow{margin-top:2px!important;padding:2px!important}
+  #lobbyView .privateRoomRow button{min-height:29px!important;padding:4px 7px!important}
+  #lobbyView .divider{margin:4px 0!important}
+  #lobbyView .field{margin:2px 0!important}
+  #lobbyView .joinline input,#lobbyView .joinButton{min-height:32px!important}
+  #lobbyView .profileShortcut{margin:2px 0!important;padding:4px 7px!important}
+  #lobbyView .profileShortcut button{min-height:27px!important}
+  #lobbyView .statusmsg{min-height:25px!important;padding:3px 6px!important;margin-top:2px!important}
+  .controlsGuide{padding:7px 10px!important}
+  .controlsGuideSummaryRow{margin:2px 0 3px}
+}
+</style>
+
 </head>
 <body>
 <header class="topbar"><div class="brand"><div class="brandIcon">⌁</div><div><div class="brandName">CHASE.EXE</div><div class="subbrand">WOODLAND PURSUIT / ONLINE MULTIPLAYER</div></div></div><div class="onlinepill"><i id="netDot" class="dot"></i><span id="netText">NOT CONNECTED</span></div></header>
@@ -390,41 +482,45 @@ body.in-game .page{height:100dvh;max-height:100dvh;padding:max(5px,env(safe-area
       <div class="controlsHint"><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>or arrow keys to move · camera follows you</span></div>
     </aside>
   </div>
-  <section class="panel controlsGuide" id="howToPlay" aria-labelledby="howToPlayTitle">
-    <div class="eyebrow">QUICK START</div>
-    <h2 id="howToPlayTitle">How to play CHASE.EXE</h2>
-    <p class="controlsGuideIntro">CHASE.EXE is a free online two-player chase game. One player runs while the other hunts. Create a private room and share its code, or use Find a Random Player. Avoid getting tagged until the 90-second round ends.</p>
-    <div class="controlInstructionGrid">
-      <article class="controlInstruction">
-        <h3>💻 Laptop and desktop</h3>
-        <ul>
-          <li>Move with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd> arrow keys.</li>
-          <li>Hold <kbd>Shift</kbd> to sprint. Sprint uses stamina; let go to recover it.</li>
-          <li>Select <strong>Fullscreen</strong> for a larger game view. Move around trees, logs and ruins to evade your rival.</li>
-        </ul>
-      </article>
-      <article class="controlInstruction">
-        <h3>📱 Mobile phone and tablet</h3>
-        <ul>
-          <li>Rotate your phone to <strong>landscape</strong> for the best view.</li>
-          <li>Drag the virtual joystick at the <strong>bottom-left</strong> to move in any direction.</li>
-          <li>Press and hold <strong>Sprint</strong> at the <strong>bottom-right</strong> to run faster. Release to save stamina.</li>
-          <li>If prompted, tap the landscape or fullscreen button. Keep both thumbs inside the game controls while playing.</li>
-        </ul>
-      </article>
-      <article class="controlInstruction">
-        <h3>🎮 Start an online match</h3>
-        <ul>
-          <li>Accept the player profile notice, choose a callsign, and save your profile.</li>
-          <li>Choose <strong>Find Match</strong> to look for a random opponent, or create a private room and share the invite code.</li>
-          <li>The runner must survive until the timer ends. The hunter tries to tag the runner before time runs out.</li>
-          <li>Use <strong>Copy Invite</strong> to share a room link with a friend. Both players need an internet connection.</li>
-        </ul>
-      </article>
+  <details class="panel controlsGuide" id="howToPlay">
+    <summary class="controlsGuideSummary" aria-labelledby="howToPlayTitle">
+      <span class="eyebrow">QUICK START</span>
+      <span class="controlsGuideSummaryRow"><strong id="howToPlayTitle">How to play CHASE.EXE</strong><span class="controlsGuideToggle">SHOW CONTROLS&nbsp; +</span></span>
+      <span class="controlsGuideIntro">Laptop: WASD or arrow keys · Mobile: landscape joystick + sprint · Multiplayer: find a random player or create/join with a room code.</span>
+    </summary>
+    <div class="howToPlayContent">
+      <p class="controlsGuideIntro">CHASE.EXE is a free online two-player chase game. One player runs while the other hunts. Create a private room and share its code, or use Find a Random Player. Avoid getting tagged until the 90-second round ends.</p>
+      <div class="controlInstructionGrid">
+        <article class="controlInstruction">
+          <h3>💻 Laptop and desktop</h3>
+          <ul>
+            <li>Move with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd> arrow keys.</li>
+            <li>Hold <kbd>Shift</kbd> to sprint. Sprint uses stamina; let go to recover it.</li>
+            <li>Select <strong>Fullscreen</strong> for a larger game view. Move around trees, logs and ruins to evade your rival.</li>
+          </ul>
+        </article>
+        <article class="controlInstruction">
+          <h3>📱 Mobile phone and tablet</h3>
+          <ul>
+            <li>Rotate your phone to <strong>landscape</strong> for the best view.</li>
+            <li>Drag the virtual joystick at the <strong>bottom-left</strong> to move in any direction.</li>
+            <li>Press and hold <strong>Sprint</strong> at the <strong>bottom-right</strong> to run faster. Release to save stamina.</li>
+            <li>If prompted, tap the landscape or fullscreen button. Keep both thumbs inside the game controls while playing.</li>
+          </ul>
+        </article>
+        <article class="controlInstruction">
+          <h3>🎮 Start an online match</h3>
+          <ul>
+            <li>Accept the player profile notice, choose a callsign, and save your profile.</li>
+            <li>Choose <strong>Find Match</strong> to look for a random opponent, or create a private room and share the invite code.</li>
+            <li>The runner must survive until the timer ends. The hunter tries to tag the runner before time runs out.</li>
+            <li>Use <strong>Copy Invite</strong> to share a room link with a friend. Both players need an internet connection.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="instructionCallout"><strong>Tip:</strong> Sprint only when you need to escape or close the gap. Your camera follows your character, so use the minimap to keep track of the arena.</div>
     </div>
-    <div class="instructionCallout"><strong>Tip:</strong> Sprint only when you need to escape or close the gap. Your camera follows your character, so use the minimap to keep track of the arena.</div>
-  </section>
-</section>
+  </details>
 <section id="gameView" class="hidden">
   <div class="hero"><div><div class="eyebrow">BLACKPINE GROUNDS / <span id="roomLabel">—</span></div><h1 style="font-size:clamp(1.5rem,4vw,2.4rem)">WOODLAND <span id="roleTitle">PURSUIT</span></h1><p id="gameSubtitle">Move quietly, use the terrain, and keep your rival in sight.</p></div><div class="actionrow gameActions" style="max-width:390px"><button id="shareBtn" class="primary">COPY INVITE</button><button id="fullscreenBtn" class="quiet">⛶ FULLSCREEN</button><button id="leaveBtn" class="quiet">LEAVE</button></div></div>
   <div class="gameShell" id="gameShell"><div class="gameHead"><div class="playerlabels"><span id="runnerBadge" class="rolepill runner">● RUNNER — CYAN</span><span id="catcherBadge" class="rolepill catcher">● CATCHER — PINK</span></div><div class="metrics"><div class="metric"><small>Time left</small><strong id="timerText">90</strong></div><div class="metric"><small>Your score</small><strong id="scoreText">0</strong></div><div class="metric"><small>Best</small><strong id="bestText">0</strong></div></div></div>
