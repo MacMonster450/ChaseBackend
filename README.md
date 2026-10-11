@@ -143,3 +143,15 @@ If you serve the HTML from an ESP32 public domain, add that page's exact origin 
 - Runner wins if the timer expires; catcher wins by tagging the runner.
 
 This is a lightweight casual-game backend, not a hardened commercial matchmaking service. It includes random room codes, per-session authorization, basic room-creation throttling, bounds/obstacle checks, and server-side catch/timer validation. For a large public launch, add stronger rate limiting, monitoring, and abuse controls.
+
+
+## Free Google Search setup (SEO)
+
+The public Render copy now includes a descriptive page title and meta description, Open Graph metadata, VideoGame JSON-LD, `/robots.txt`, and `/sitemap.xml`. The HTML served at `/` is the page intended for public search discovery. A private ESP32 address such as `192.168.x.x` is not publicly crawlable.
+
+1. Push the updated `public/index.html`, `public/robots.txt`, `public/sitemap.xml`, and `public/admin.html` to GitHub and wait for Render to deploy.
+2. Open `https://chasebackend-9loz.onrender.com/robots.txt` and `https://chasebackend-9loz.onrender.com/sitemap.xml` to confirm they load.
+3. Open Google Search Console at `https://search.google.com/search-console/` and add a URL-prefix property for `https://chasebackend-9loz.onrender.com/`.
+4. Choose the HTML-tag ownership verification method. Copy the exact `google-site-verification` meta tag Google gives you into the `<head>` of `public/index.html`, commit and push it, wait for Render to redeploy, then complete verification. Do not invent or reuse someone else's verification token.
+5. In Search Console, open URL Inspection for `https://chasebackend-9loz.onrender.com/` and choose Request Indexing. Then submit `https://chasebackend-9loz.onrender.com/sitemap.xml` under Sitemaps.
+6. Keep useful laptop/mobile instructions visible on the landing page and share the public game page from relevant project pages and communities. Search indexing and rank are not guaranteed, and no one can guarantee a #1 position.

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Sitemap: https://chasebackend-9loz.onrender.com/sitemap.xml
